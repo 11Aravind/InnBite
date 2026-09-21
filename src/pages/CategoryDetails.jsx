@@ -1,23 +1,32 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { categoriesData } from '../data/categoryData';
-import { foodDataMap } from '../data/foodData';
 import FoodCard from '../components/FoodCard';
 import CallButton from '../components/CallButton';
 import BottomNavigation from '../components/BottomNavigation';
+import { apiService } from '../utils/apiService';
+import Skeleton from 'react-loading-skeleton';
 
 export default function CategoryDetails() {
     const { categoryId } = useParams();
     const navigate = useNavigate();
-    const category = categoriesData.find(cat => cat.id === categoryId);
 
-    // Filter foods based on category
-    const categoryFoods = Object.values(foodDataMap).filter(food => food.category === categoryId);
+    const [category, setCategory] = useState(null);
+    const [categoryFoods, setCategoryFoods] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    if (!category) return <div>Category not found</div>;
     useEffect(() => {
         window.scrollTo(0, 0);
-    }, []);
+        setLoading(true);
+        Promise.all([
+            apiService.getCategories(),
+            apiService.getDishes(categoryId)
+        ]).then(([categories, foods]) => {
+            const cat = categories.find(c => c.id === categoryId);
+            setCategory(cat || { id: categoryId, name: categoryId });
+            setCategoryFoods(foods || []);
+        }).finally(() => setLoading(false));
+    }, [categoryId]);
+
     return (
         <div className="container relative flex size-full min-h-screen flex-col bg-white">
             <div className="flex items-center bg-white p-4 pb-2 justify-between">
@@ -30,25 +39,30 @@ export default function CategoryDetails() {
                     </svg>
                 </div>
                 <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
-                    {category.name}
+                    {category?.name || 'Category'}
                 </h2>
                 <CallButton />
             </div>
 
-            {categoryFoods.length > 0 ? (
-                <div className="flex flex-wrap gap-4 p-4">
+            {loading ? (
+                <div className="p-4 grid grid-cols-2 gap-4">
+                    <Skeleton height={140} borderRadius={12} />
+                    <Skeleton height={140} borderRadius={12} />
+                </div>
+            ) : categoryFoods.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4 p-4">
                     {categoryFoods.map(food => (
                         <FoodCard
                             key={food.id}
                             id={food.id}
-                            image={food.images[0]}
+                            image={food.images?.[0] || food.image || '/placeholderfood.png'}
                             name={food.name}
-                            price={food.basePrice}
+                            price={food.basePrice || food.base_price}
                         />
                     ))}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center flex-1 px-4 py-8">
+                <div className="flex flex-col items-center justify-center flex-1 px-4 py-12">
                     <div className="bg-gray-100 rounded-full p-6 mb-4">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

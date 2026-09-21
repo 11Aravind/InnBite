@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from 'react-use-cart';
 import CartItem from '../components/CartItem';
+import { apiService } from '../utils/apiService';
+import { openRazorpayCheckout } from '../utils/razorpay';
 
 export default function Cart() {
     const navigate = useNavigate();
@@ -10,19 +12,145 @@ export default function Cart() {
         updateItemQuantity,
         removeItem,
         cartTotal,
+        emptyCart,
         isEmpty
     } = useCart();
+
+    const [tableNumber, setTableNumber] = useState(() => {
+        return localStorage.getItem('orderly_table_number') || '1';
+    });
+
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('counter'); // 'counter' | 'razorpay'
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [orderPlaced, setOrderPlaced] = useState(null);
 
     const handleClose = () => {
         navigate(-1);
     };
-    console.log(items);
+
+    const handleTableChange = (e) => {
+        const val = e.target.value;
+        setTableNumber(val);
+        localStorage.setItem('orderly_table_number', val);
+    };
+
+    const handlePlaceOrder = async () => {
+        if (isEmpty) return;
+
+        setIsSubmitting(true);
+
+        const orderPayload = {
+            table_number: tableNumber,
+            customer_name: customerName || 'Guest',
+            customer_phone: customerPhone || '',
+            total_amount: cartTotal,
+            payment_method: paymentMethod,
+            payment_status: paymentMethod === 'razorpay' ? 'paid' : 'pending',
+            items: items.map(item => ({
+                id: item.id,
+                dish_id: item.dish_id || item.id,
+                name: item.name,
+                price: item.price,
+                portion: item.portion || 'Regular',
+                quantity: item.quantity
+            }))
+        };
+
+        if (paymentMethod === 'razorpay') {
+            try {
+                await openRazorpayCheckout({
+                    amount: cartTotal,
+                    customerName: customerName || 'Guest',
+                    customerPhone: customerPhone || '9999999999',
+                    onSuccess: async (razorpayResponse) => {
+                        const finalPayload = {
+                            ...orderPayload,
+                            payment_status: 'paid',
+                            razorpay_payment_id: razorpayResponse.razorpay_payment_id
+                        };
+                        const res = await apiService.createOrder(finalPayload);
+                        setIsSubmitting(false);
+                        if (res.success) {
+                            setOrderPlaced(res.order);
+                            emptyCart();
+                        }
+                    },
+                    onFailure: (err) => {
+                        setIsSubmitting(false);
+                        alert('Payment was not completed: ' + err.message);
+                    }
+                });
+            } catch (err) {
+                setIsSubmitting(false);
+                alert('Razorpay Checkout initialization failed');
+            }
+        } else {
+            // Pay at Counter
+            try {
+                const res = await apiService.createOrder(orderPayload);
+                setIsSubmitting(false);
+                if (res.success) {
+                    setOrderPlaced(res.order);
+                    emptyCart();
+                }
+            } catch (err) {
+                setIsSubmitting(false);
+                alert('Failed to place order. Please try again.');
+            }
+        }
+    };
+
+    if (orderPlaced) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6 text-emerald-600">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h1>
+                <p className="text-gray-500 mb-6">Your order has been sent directly to the kitchen.</p>
+
+                <div className="w-full max-w-sm bg-gray-50 rounded-2xl p-5 mb-8 text-left border border-gray-100">
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
+                        <span className="text-sm text-gray-500">Table Number</span>
+                        <span className="text-lg font-bold text-gray-900">Table #{orderPlaced.table_number}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
+                        <span className="text-sm text-gray-500">Order ID</span>
+                        <span className="text-xs font-mono text-gray-700">{orderPlaced.id}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
+                        <span className="text-sm text-gray-500">Payment Option</span>
+                        <span className="text-sm font-semibold capitalize text-gray-800">
+                            {orderPlaced.payment_method === 'razorpay' ? 'Paid via Razorpay 💳' : 'Pay at Counter 💵'}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                        <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                        <span className="text-xl font-bold text-emerald-600">${Number(orderPlaced.total_amount).toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => navigate('/')}
+                    className="w-full max-w-sm h-12 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-colors"
+                >
+                    Back to Home
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="container relative flex size-full min-h-screen flex-col bg-white justify-between group/design-root overflow-x-hidden"
             style={{ fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif' }}>
             <div>
-                <div className="flex items-center bg-white p-4 pb-2 justify-between">
+                {/* Header */}
+                <div className="flex items-center bg-white p-4 pb-2 justify-between border-b border-gray-100">
                     <div className="text-[#171312] flex size-12 shrink-0 items-center cursor-pointer"
                         onClick={handleClose}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
@@ -34,12 +162,44 @@ export default function Cart() {
                         Your Order
                     </h2>
                 </div>
+
+                {/* Table Banner / Input */}
+                <div className="bg-[#fdf8f6] p-4 border-b border-[#f4e8e5] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl">📍</span>
+                        <div>
+                            <span className="text-xs text-[#836c67] block font-medium">Table Assignment</span>
+                            <span className="text-base font-bold text-[#171312]">Table #{tableNumber}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-[#edc3ba]">
+                        <label className="text-xs text-gray-500 font-semibold">Table No:</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={tableNumber}
+                            onChange={handleTableChange}
+                            className="w-12 text-center text-sm font-bold outline-none bg-transparent"
+                        />
+                    </div>
+                </div>
+
                 <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                     Items
                 </h3>
 
                 {isEmpty ? (
-                    <div className="px-4 py-8 text-center text-[#836c67]">Your cart is empty.</div>
+                    <div className="px-4 py-12 text-center text-[#836c67]">
+                        <span className="text-4xl block mb-2">🛒</span>
+                        <p className="text-base font-medium">Your cart is empty.</p>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="mt-4 px-6 py-2 bg-[#f4f1f1] text-[#171312] rounded-full text-sm font-bold"
+                        >
+                            Browse Menu
+                        </button>
+                    </div>
                 ) : (
                     items.map(item => (
                         <CartItem
@@ -52,36 +212,103 @@ export default function Cart() {
                     ))
                 )}
 
-                {/* Order Summary */}
                 {!isEmpty && (
-                    <div className="bg-white px-4 py-6">
-                        <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] mb-4">
-                            Order Summary
-                        </h3>
-                        <div className="flex flex-col gap-3">
-                            <div className="flex justify-between">
-                                <span className="text-[#171312] text-base font-normal">Subtotal</span>
-                                <span className="text-[#171312] text-base font-medium">${cartTotal.toFixed(2)}</span>
-                            </div>
-                            {/* You can add delivery fee/tax here if needed */}
-                            <div className="flex justify-between pt-3 border-t border-[#f4f1f1]">
-                                <span className="text-[#171312] text-base font-bold">Total</span>
-                                <span className="text-[#171312] text-base font-bold">${cartTotal.toFixed(2)}</span>
+                    <>
+                        {/* Customer Info Form */}
+                        <div className="px-4 py-4 border-t border-[#f4f1f1]">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] mb-3">
+                                Customer Details (Optional)
+                            </h3>
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Your Name (e.g. John)"
+                                    value={customerName}
+                                    onChange={(e) => setCustomerName(e.target.value)}
+                                    className="w-full h-11 bg-[#f4f1f1] px-4 rounded-xl text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
+                                <input
+                                    type="tel"
+                                    placeholder="Phone Number (for order SMS)"
+                                    value={customerPhone}
+                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                    className="w-full h-11 bg-[#f4f1f1] px-4 rounded-xl text-sm outline-none focus:ring-2 focus:ring-black/10"
+                                />
                             </div>
                         </div>
-                    </div>
+
+                        {/* Payment Method Selector */}
+                        <div className="px-4 py-4 border-t border-[#f4f1f1]">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] mb-3">
+                                Select Payment Method
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === 'counter' ? 'border-black bg-black/5 text-black' : 'border-gray-200 bg-white text-gray-500'}`}>
+                                    <span className="text-2xl mb-1">💵</span>
+                                    <span className="text-xs font-bold">Pay at Counter</span>
+                                    <span className="text-[10px] text-gray-500">Pay cash or card later</span>
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        value="counter"
+                                        checked={paymentMethod === 'counter'}
+                                        onChange={() => setPaymentMethod('counter')}
+                                        className="hidden"
+                                    />
+                                </label>
+
+                                <label className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-black bg-black/5 text-black' : 'border-gray-200 bg-white text-gray-500'}`}>
+                                    <span className="text-2xl mb-1">💳</span>
+                                    <span className="text-xs font-bold">Online Payment</span>
+                                    <span className="text-[10px] text-gray-500">Pay now via Razorpay</span>
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        value="razorpay"
+                                        checked={paymentMethod === 'razorpay'}
+                                        onChange={() => setPaymentMethod('razorpay')}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Order Summary */}
+                        <div className="bg-white px-4 py-4 border-t border-[#f4f1f1] mb-24">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] mb-3">
+                                Order Summary
+                            </h3>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-[#836c67]">Subtotal</span>
+                                    <span className="text-[#171312] font-medium">${cartTotal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t border-[#f4f1f1]">
+                                    <span className="text-[#171312] text-base font-bold">Total Amount</span>
+                                    <span className="text-[#171312] text-lg font-bold">${cartTotal.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
 
-            {/* Checkout Button */}
+            {/* Sticky Order Button */}
             {!isEmpty && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white">
-                    <div className="flex px-4 py-3">
-                        <button className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#edc3ba] text-[#171312] text-base font-bold leading-normal tracking-[0.015em]">
-                            <span className="truncate">Checkout · ${cartTotal.toFixed(2)}</span>
-                        </button>
-                    </div>
-                    <div className="h-5 bg-white"></div>
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-20">
+                    <button
+                        onClick={handlePlaceOrder}
+                        disabled={isSubmitting}
+                        className="w-full h-12 bg-[#171312] text-white font-bold rounded-full flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-colors shadow-lg"
+                    >
+                        {isSubmitting ? (
+                            <span>Processing Order...</span>
+                        ) : (
+                            <span>
+                                {paymentMethod === 'razorpay' ? 'Pay Online & Confirm' : 'Confirm Order (Pay at Counter)'} · ${cartTotal.toFixed(2)}
+                            </span>
+                        )}
+                    </button>
                 </div>
             )}
         </div>

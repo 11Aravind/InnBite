@@ -1,35 +1,58 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { foodDataMap } from '../data/foodData';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SearchResults from '../components/SearchResults';
 import CallButton from '../components/CallButton';
-import FoodCard from '../components/FoodCard'
+import FoodCard from '../components/FoodCard';
 import CategoryCard from '../components/CategoryCard';
 import BottomNavigation from '../components/BottomNavigation';
-import useApi from '../utils/hooks/useApi'; // Make sure this import exists
-import Skeleton from 'react-loading-skeleton'; // Import Skeleton
+import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import { apiService } from '../utils/apiService';
 
 export default function Home() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
 
-    // API state
-    const { get } = useApi();
+    // Table detection from QR Code URL (?table=X)
+    const [tableNumber, setTableNumber] = useState(() => {
+        const urlTable = searchParams.get('table');
+        if (urlTable) {
+            localStorage.setItem('orderly_table_number', urlTable);
+            return urlTable;
+        }
+        return localStorage.getItem('orderly_table_number') || '1';
+    });
+
+    // API Data state
     const [homeData, setHomeData] = useState(null);
-    const [apiLoading, setApiLoading] = useState(true); // <-- add this
+    const [allDishes, setAllDishes] = useState([]);
+    const [apiLoading, setApiLoading] = useState(true);
 
     useEffect(() => {
-        setApiLoading(true); // <-- set loading true before API call
-        get('/home_page_data')
-            .then((res) => {
-                if (res) setHomeData(res);
+        const tableFromUrl = searchParams.get('table');
+        if (tableFromUrl) {
+            localStorage.setItem('orderly_table_number', tableFromUrl);
+            setTableNumber(tableFromUrl);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        setApiLoading(true);
+        Promise.all([
+            apiService.getHomePageData(),
+            apiService.getDishes()
+        ])
+            .then(([data, dishes]) => {
+                if (data) setHomeData(data);
+                if (dishes) setAllDishes(dishes);
             })
-            .finally(() => setApiLoading(false)); // <-- set loading false after API call
+            .catch((err) => console.error('Data load error:', err))
+            .finally(() => setApiLoading(false));
     }, []);
 
-    // Debounce search to improve performance
+    // Debounce search
     const debounce = (func, wait) => {
         let timeout;
         return (...args) => {
@@ -39,12 +62,11 @@ export default function Home() {
     };
 
     const searchFoods = useCallback(
-        debounce((query) => {
+        debounce(() => {
             setIsSearching(true);
-            // Simulate search delay
             setTimeout(() => {
                 setIsSearching(false);
-            }, 300);
+            }, 250);
         }, 300),
         []
     );
@@ -57,46 +79,47 @@ export default function Home() {
         }
     };
 
-    // Filter foods based on search query
+    // Filter dishes based on search query
     const searchResults = searchQuery.length > 2
-        ? Object.values(foodDataMap).filter(food =>
-            food.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            food.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            food.ingredients.some(ingredient =>
-                ingredient.toLowerCase().includes(searchQuery.toLowerCase())
-            )
+        ? allDishes.filter(food =>
+            food.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            food.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (food.ingredients && food.ingredients.some(ing => ing.toLowerCase().includes(searchQuery.toLowerCase())))
         )
         : [];
 
-    // Use API data if available, fallback to empty arrays
     const banners = homeData?.banners || [];
     const popularDishes = homeData?.popular_dishes || [];
     const todaysSpecials = homeData?.todays_specials || [];
     const categories = homeData?.categories || [];
-    useEffect(() => {
-        console.log(banners, popularDishes, todaysSpecials, categories);
 
-    })
     return (
         <div
             className="relative flex size-full min-h-screen flex-col bg-white justify-between group/design-root overflow-x-hidden"
             style={{ fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif' }}
         >
             <div>
+                {/* Header with Brand & Table Badge */}
                 <div className="flex items-center bg-white p-4 pb-2 justify-between">
                     <div
-                        className="text-[#171212] flex size-12 shrink-0 items-center"
-                        data-icon="ForkKnife"
-                        data-size="24px"
-                        data-weight="regular"
+                        className="text-[#171212] flex size-12 shrink-0 items-center cursor-pointer"
+                        onClick={() => navigate('/')}
                     >
-                        <img src="/logo.svg" alt="" />
+                        <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
                     </div>
-                    <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
-                        Orderly
-                    </h2>
+                    <div className="flex flex-col items-center flex-1">
+                        <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
+                            Orderly
+                        </h2>
+                        <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-[#171212] text-xs font-semibold">Table #{tableNumber}</span>
+                        </div>
+                    </div>
                     <CallButton />
                 </div>
+
+                {/* Search Bar */}
                 <div className="px-4 pb-3 pt-2">
                     <label className="relative flex w-full items-center">
                         <div className="flex h-12 w-full items-center overflow-hidden rounded-xl bg-[#f4f1f1]">
@@ -112,15 +135,13 @@ export default function Home() {
                                 </svg>
                             </div>
 
-                            {/* Search Input */}
                             <input
-                                placeholder="Search for food"
+                                placeholder="Search for food, ingredients..."
                                 className="h-full w-full bg-[#f4f1f1] pl-12 pr-10 text-base font-normal leading-normal text-[#171212] placeholder:text-[#82686a] focus:outline-none"
                                 value={searchQuery}
                                 onChange={handleSearchChange}
                             />
 
-                            {/* Close Button */}
                             {searchQuery && (
                                 <button
                                     className="absolute right-3 text-[#82686a] hover:text-[#171212] transition-colors"
@@ -141,7 +162,7 @@ export default function Home() {
                     </label>
                 </div>
 
-                {/* Show search results or regular content */}
+                {/* Main Content or Search Results */}
                 {searchQuery.length > 2 ? (
                     <SearchResults
                         results={searchResults}
@@ -149,7 +170,7 @@ export default function Home() {
                     />
                 ) : (
                     <>
-                        {/* Banners from API */}
+                        {/* Banners */}
                         <div className="flex overflow-x-auto overflow-y-hidden [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <div className="flex items-stretch p-4 gap-3 snap-x snap-mandatory">
                                 {apiLoading ? (
@@ -163,23 +184,24 @@ export default function Home() {
                                     banners.map((banner) => (
                                         <div
                                             key={banner.id}
-                                            className="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-[280px] sm:min-w-60 snap-start"
+                                            className="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-[280px] sm:min-w-60 snap-start cursor-pointer"
+                                            onClick={() => banner.dish_id && navigate(`/FoodDetails/${banner.dish_id}`)}
                                         >
                                             <div
-                                                className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col"
+                                                className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col shadow-sm"
                                                 style={{
                                                     backgroundImage: `url("${banner.image_url}")`
                                                 }}
                                             ></div>
                                             <p className="text-[#171212] text-base font-medium leading-normal">
                                                 {banner.title}
-                                                {banner.dish?.name ? `: ${banner.dish.name}` : ''}
                                             </p>
                                         </div>
                                     ))
                                 )}
                             </div>
                         </div>
+
                         {/* Popular Dishes Section */}
                         <h2 className="text-[#171212] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                             Popular Dishes
@@ -199,9 +221,9 @@ export default function Home() {
                                         <FoodCard
                                             key={dish.id}
                                             id={dish.id}
-                                            image='/placeholderfood.png'
+                                            image={dish.images?.[0] || dish.image || '/placeholderfood.png'}
                                             name={dish.name}
-                                            price={dish.base_price}
+                                            price={dish.basePrice || dish.base_price}
                                             description={dish.description}
                                         />
                                     ))
@@ -224,30 +246,32 @@ export default function Home() {
                                         </div>
                                     ))
                                 ) : todaysSpecials.length === 0 ? (
-                                    <div className="text-[#82686a]">No specials for today</div>
+                                    <div className="text-[#82686a] px-4">No specials available today</div>
                                 ) : (
                                     todaysSpecials.map((item) => (
                                         <FoodCard
                                             key={item.id}
                                             id={item.id}
-                                            image='/placeholderfood.png'
+                                            image={item.images?.[0] || item.image || '/placeholderfood.png'}
                                             name={item.name}
-                                            price={item.base_price}
+                                            price={item.basePrice || item.base_price}
                                             description={item.description}
                                         />
                                     ))
                                 )}
                             </div>
                         </div>
+
+                        {/* Categories Section */}
                         <h2 className="text-[#171212] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                             Categories
                         </h2>
-                        <div>
+                        <div className="pb-4">
                             {apiLoading ? (
-                                Array(5).fill(0).map((_, idx) => (
-                                    <div key={idx} className="flex items-center gap-3 mb-3">
+                                Array(4).fill(0).map((_, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 px-4 mb-3">
                                         <Skeleton circle width={48} height={48} />
-                                        <Skeleton width={100} height={20} />
+                                        <Skeleton width={120} height={20} />
                                     </div>
                                 ))
                             ) : (
@@ -255,7 +279,7 @@ export default function Home() {
                                     <CategoryCard
                                         key={category.id}
                                         id={category.id}
-                                        image='/placeholderfood.png'
+                                        image={category.image_url || category.image || '/placeholderfood.png'}
                                         name={category.name}
                                     />
                                 ))
@@ -265,9 +289,7 @@ export default function Home() {
                 )}
             </div>
             <BottomNavigation />
-
-            {/* Add padding to main content to prevent overlap with fixed navigation */}
             <div className="pb-[72px]" />
         </div>
-    )
+    );
 }
