@@ -74,7 +74,7 @@ export const apiService = {
                     }
                 }
             } catch (err) {
-                console.warn('Supabase home data fetch 401/error, using fallback:', err);
+                console.warn('Supabase home data fetch error, using fallback:', err);
             }
         }
 
@@ -124,7 +124,8 @@ export const apiService = {
     async getDishById(id) {
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase.from('dishes').select('*').eq('id', id).single();
+                // Use maybeSingle() instead of single() to avoid PGRST116 (0 rows error)
+                const { data, error } = await supabase.from('dishes').select('*').eq('id', id).maybeSingle();
                 if (!error && data) return data;
             } catch (err) {
                 console.warn('Supabase single dish fetch error:', err);
@@ -151,6 +152,10 @@ export const apiService = {
 
         if (isSupabaseConfigured) {
             try {
+                // Check existing dish IDs in Supabase to avoid 23503 foreign key error
+                const { data: dbDishes } = await supabase.from('dishes').select('id');
+                const validDishIds = new Set((dbDishes || []).map(d => d.id));
+
                 const { data: insertedOrder, error: orderErr } = await supabase
                     .from('orders')
                     .insert([{
@@ -167,21 +172,24 @@ export const apiService = {
                     .single();
 
                 if (!orderErr && insertedOrder) {
-                    const itemsToInsert = (orderPayload.items || []).map(item => ({
-                        order_id: insertedOrder.id,
-                        dish_id: item.dish_id || item.id,
-                        dish_name: item.name,
-                        portion_label: item.portion || 'Regular',
-                        unit_price: item.price,
-                        quantity: item.quantity,
-                        subtotal: item.price * item.quantity
-                    }));
+                    const itemsToInsert = (orderPayload.items || []).map(item => {
+                        const rawDishId = item.dish_id || item.id;
+                        return {
+                            order_id: insertedOrder.id,
+                            dish_id: validDishIds.has(rawDishId) ? rawDishId : null, // FK safety check!
+                            dish_name: item.name,
+                            portion_label: item.portion || 'Regular',
+                            unit_price: item.price,
+                            quantity: item.quantity,
+                            subtotal: item.price * item.quantity
+                        };
+                    });
 
                     await supabase.from('order_items').insert(itemsToInsert);
                     return { success: true, order: insertedOrder };
                 }
             } catch (err) {
-                console.warn('Supabase createOrder 401/error, using fallback order creation:', err);
+                console.warn('Supabase createOrder error, using local fallback:', err);
             }
         }
 
