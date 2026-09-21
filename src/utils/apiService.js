@@ -64,7 +64,6 @@ export const apiService = {
                     const allDishes = dishesRes.data || [];
                     const categories = categoriesRes.data || [];
 
-                    // If Supabase returns actual rows, use them!
                     if (categories.length > 0 || allDishes.length > 0) {
                         return {
                             banners,
@@ -75,11 +74,10 @@ export const apiService = {
                     }
                 }
             } catch (err) {
-                console.warn('Supabase home data fetch failed, using fallback:', err);
+                console.warn('Supabase home data fetch 401/error, using fallback:', err);
             }
         }
 
-        // Guaranteed Fallback so customer screen is NEVER blank
         const dishesList = getLocalStore(MOCK_DISHES_KEY, Object.values(foodDataMap));
         const categoriesList = getLocalStore(MOCK_CATEGORIES_KEY, categoriesData);
         const bannersList = getLocalStore(MOCK_BANNERS_KEY, initialBanners);
@@ -183,7 +181,7 @@ export const apiService = {
                     return { success: true, order: insertedOrder };
                 }
             } catch (err) {
-                console.error('Supabase createOrder error:', err);
+                console.warn('Supabase createOrder 401/error, using fallback order creation:', err);
             }
         }
 
@@ -202,7 +200,7 @@ export const apiService = {
                     .order('created_at', { ascending: false });
                 if (!error && data) return data;
             } catch (err) {
-                console.error('Supabase fetch orders error:', err);
+                console.warn('Supabase fetch orders error:', err);
             }
         }
         return getLocalStore(MOCK_ORDERS_KEY, []);
@@ -213,7 +211,7 @@ export const apiService = {
             try {
                 await supabase.from('orders').update({ status }).eq('id', orderId);
             } catch (err) {
-                console.error('Supabase update order status error:', err);
+                console.warn('Supabase update order status error:', err);
             }
         }
 
@@ -230,7 +228,7 @@ export const apiService = {
                 if (razorpay_payment_id) updatePayload.razorpay_payment_id = razorpay_payment_id;
                 await supabase.from('orders').update(updatePayload).eq('id', orderId);
             } catch (err) {
-                console.error('Supabase update payment status error:', err);
+                console.warn('Supabase update payment status error:', err);
             }
         }
 
@@ -268,7 +266,7 @@ export const apiService = {
                 const { data, error } = await supabase.from('tables').insert([{ table_number: Number(tableNumber) }]).select().single();
                 if (!error && data) return data;
             } catch (err) {
-                console.error('Supabase createTable error:', err);
+                console.warn('Supabase createTable error:', err);
             }
         }
 
@@ -283,7 +281,7 @@ export const apiService = {
             try {
                 await supabase.from('tables').delete().eq('id', tableId);
             } catch (err) {
-                console.error('Supabase delete table error:', err);
+                console.warn('Supabase delete table error:', err);
             }
         }
         const tables = getLocalStore(MOCK_TABLES_KEY, initialTables);
@@ -302,10 +300,9 @@ export const apiService = {
 
         if (isSupabaseConfigured) {
             try {
-                const { error } = await supabase.from('dishes').upsert([dishData]);
-                if (error) console.error('Supabase saveDish error:', error);
+                await supabase.from('dishes').upsert([dishData]);
             } catch (err) {
-                console.error('Supabase saveDish exception:', err);
+                console.warn('Supabase saveDish exception:', err);
             }
         }
 
@@ -327,7 +324,7 @@ export const apiService = {
             try {
                 await supabase.from('dishes').delete().eq('id', dishId);
             } catch (err) {
-                console.error('Supabase delete dish error:', err);
+                console.warn('Supabase delete dish error:', err);
             }
         }
         const dishes = getLocalStore(MOCK_DISHES_KEY, Object.values(foodDataMap));
@@ -346,7 +343,7 @@ export const apiService = {
             try {
                 await supabase.from('categories').upsert([categoryData]);
             } catch (err) {
-                console.error('Supabase save category error:', err);
+                console.warn('Supabase save category error:', err);
             }
         }
 
@@ -368,7 +365,7 @@ export const apiService = {
             try {
                 await supabase.from('categories').delete().eq('id', categoryId);
             } catch (err) {
-                console.error('Supabase delete category error:', err);
+                console.warn('Supabase delete category error:', err);
             }
         }
         const categories = getLocalStore(MOCK_CATEGORIES_KEY, categoriesData);
@@ -387,7 +384,7 @@ export const apiService = {
             try {
                 await supabase.from('banners').upsert([bannerData]);
             } catch (err) {
-                console.error('Supabase save banner error:', err);
+                console.warn('Supabase save banner error:', err);
             }
         }
 
@@ -409,7 +406,7 @@ export const apiService = {
             try {
                 await supabase.from('banners').delete().eq('id', bannerId);
             } catch (err) {
-                console.error('Supabase delete banner error:', err);
+                console.warn('Supabase delete banner error:', err);
             }
         }
         const banners = getLocalStore(MOCK_BANNERS_KEY, initialBanners);
