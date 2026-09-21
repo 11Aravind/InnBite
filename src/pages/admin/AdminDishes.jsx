@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../utils/apiService';
+import {
+    Plus,
+    Edit2,
+    Trash2,
+    Utensils,
+    Star,
+    Sparkles,
+    CheckCircle2,
+    XCircle,
+    X,
+    DollarSign
+} from 'lucide-react';
 
 export default function AdminDishes() {
     const [dishes, setDishes] = useState([]);
@@ -8,7 +20,6 @@ export default function AdminDishes() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDish, setEditingDish] = useState(null);
 
-    // Form fields state
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -110,25 +121,28 @@ export default function AdminDishes() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4">
+        <div className="space-y-6 text-slate-100">
+            <div className="flex flex-wrap justify-between items-center gap-4 pb-2 border-b border-slate-800">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Dishes & Menu Management</h1>
-                    <p className="text-xs text-gray-500">Create, edit, and toggle menu item details</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        Dishes & Menu Management <Utensils className="w-5 h-5 text-rose-500" />
+                    </h1>
+                    <p className="text-xs text-slate-400">Create, edit, and toggle menu item details</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-4 py-2.5 bg-black hover:bg-gray-800 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
                 >
-                    <span>➕ Add New Dish</span>
+                    <Plus className="w-4 h-4" />
+                    <span>Add New Dish</span>
                 </button>
             </div>
 
             {/* Dishes Grid */}
             {loading ? (
-                <div className="text-center py-12 text-gray-400">Loading dishes...</div>
+                <div className="text-center py-12 text-slate-500">Loading dishes...</div>
             ) : dishes.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">No dishes created yet</div>
+                <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800">No dishes created yet</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {dishes.map((dish) => {
@@ -136,43 +150,47 @@ export default function AdminDishes() {
                         const price = Number(dish.basePrice || dish.base_price || 0).toFixed(2);
 
                         return (
-                            <div key={dish.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col justify-between">
+                            <div key={dish.id} className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 shadow-xl p-4 flex flex-col justify-between">
                                 <div>
                                     <div
-                                        className="w-full h-40 bg-center bg-cover rounded-xl mb-3 relative"
+                                        className="w-full h-44 bg-center bg-cover rounded-xl mb-3 relative overflow-hidden ring-1 ring-white/10"
                                         style={{ backgroundImage: `url("${img}")` }}
                                     >
-                                        <div className="absolute top-2 right-2 flex gap-1">
+                                        <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                                             {(dish.is_popular || dish.isPopular) && (
-                                                <span className="bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full">Popular</span>
+                                                <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                                                    <Star className="w-3 h-3 fill-slate-950" /> Popular
+                                                </span>
                                             )}
                                             {(dish.is_special || dish.isSpecial) && (
-                                                <span className="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Special</span>
+                                                <span className="bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                                                    <Sparkles className="w-3 h-3" /> Special
+                                                </span>
                                             )}
                                         </div>
                                     </div>
-                                    <h3 className="font-bold text-gray-900 text-base">{dish.name}</h3>
-                                    <p className="text-xs text-gray-500 line-clamp-2 my-1">{dish.description}</p>
-                                    <div className="text-sm font-bold text-emerald-600 mt-2">${price}</div>
+                                    <h3 className="font-bold text-white text-base">{dish.name}</h3>
+                                    <p className="text-xs text-slate-400 line-clamp-2 my-1.5 leading-relaxed">{dish.description}</p>
+                                    <div className="text-sm font-black text-emerald-400 mt-2">${price}</div>
                                 </div>
 
-                                <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
-                                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${dish.is_available !== false ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                <div className="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between">
+                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${dish.is_available !== false ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
                                         {dish.is_available !== false ? 'Available' : 'Out of stock'}
                                     </span>
 
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleOpenModal(dish)}
-                                            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg"
+                                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
                                         >
-                                            Edit
+                                            <Edit2 className="w-3 h-3 text-slate-400" /> Edit
                                         </button>
                                         <button
                                             onClick={() => handleDeleteDish(dish.id)}
-                                            className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg"
+                                            className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 border border-rose-500/20"
                                         >
-                                            Delete
+                                            <Trash2 className="w-3 h-3" /> Delete
                                         </button>
                                     </div>
                                 </div>
@@ -184,145 +202,151 @@ export default function AdminDishes() {
 
             {/* Add / Edit Dish Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                            <h2 className="text-lg font-bold text-gray-900">
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl text-slate-100">
+                        <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-800">
+                            <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                                <Utensils className="w-5 h-5 text-rose-500" />
                                 {editingDish ? 'Edit Dish Details' : 'Add New Dish'}
                             </h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
                         <form onSubmit={handleSaveDish} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Dish Name *</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Dish Name *</label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs font-bold text-gray-700 block mb-1">Base Price ($) *</label>
+                                    <label className="text-xs font-bold text-slate-300 block mb-1">Base Price ($) *</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         required
                                         value={formData.basePrice}
                                         onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                                        className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                        className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-700 block mb-1">Category *</label>
+                                    <label className="text-xs font-bold text-slate-300 block mb-1">Category *</label>
                                     <select
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                        className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                     >
                                         {categories.map((c) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Image URL</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Image URL</label>
                                 <input
                                     type="url"
                                     placeholder="https://..."
                                     value={formData.imageUrl}
                                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                                    className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Description</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Description</label>
                                 <textarea
                                     rows="2"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full bg-slate-800/80 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Ingredients (comma-separated)</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Ingredients (comma-separated)</label>
                                 <input
                                     type="text"
                                     placeholder="Tomatoes, Cheese, Basil"
                                     value={formData.ingredients}
                                     onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                                    className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Allergens (comma-separated)</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Allergens (comma-separated)</label>
                                 <input
                                     type="text"
                                     placeholder="Milk, Gluten"
                                     value={formData.allergens}
                                     onChange={(e) => setFormData({ ...formData, allergens: e.target.value })}
-                                    className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1">Taste Profile (comma-separated)</label>
+                                <label className="text-xs font-bold text-slate-300 block mb-1">Taste Profile (comma-separated)</label>
                                 <input
                                     type="text"
                                     placeholder="Savory, Rich, Fresh"
                                     value={formData.tasteProfile}
                                     onChange={(e) => setFormData({ ...formData, tasteProfile: e.target.value })}
-                                    className="w-full h-11 bg-gray-50 border border-gray-200 px-3 rounded-xl text-sm outline-none focus:border-black"
+                                    className="w-full h-11 bg-slate-800/80 border border-slate-700 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-white"
                                 />
                             </div>
 
                             <div className="flex flex-wrap gap-4 pt-2">
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-300">
                                     <input
                                         type="checkbox"
                                         checked={formData.isPopular}
                                         onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
+                                        className="rounded border-slate-700 text-rose-500 focus:ring-rose-500"
                                     />
                                     <span>Is Popular Dish</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-300">
                                     <input
                                         type="checkbox"
                                         checked={formData.isSpecial}
                                         onChange={(e) => setFormData({ ...formData, isSpecial: e.target.checked })}
+                                        className="rounded border-slate-700 text-rose-500 focus:ring-rose-500"
                                     />
                                     <span>Today's Special</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-300">
                                     <input
                                         type="checkbox"
                                         checked={formData.isAvailable}
                                         onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
+                                        className="rounded border-slate-700 text-rose-500 focus:ring-rose-500"
                                     />
                                     <span>Is Available</span>
                                 </label>
                             </div>
 
-                            <div className="pt-4 border-t border-gray-100 flex gap-3">
+                            <div className="pt-4 border-t border-slate-800 flex gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="w-1/2 h-11 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm"
+                                    className="w-1/2 h-11 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-sm transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="w-1/2 h-11 bg-black text-white font-bold rounded-xl text-sm hover:bg-gray-800"
+                                    className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-rose-500/20"
                                 >
                                     Save Dish
                                 </button>

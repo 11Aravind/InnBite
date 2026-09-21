@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../utils/apiService';
+import { Receipt, RefreshCw, CheckCircle2, Clock, DollarSign, CreditCard } from 'lucide-react';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
@@ -32,20 +33,22 @@ export default function AdminOrders() {
         : orders.filter(o => o.payment_status === filterPayment);
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4">
+        <div className="space-y-6 text-slate-100">
+            <div className="flex flex-wrap justify-between items-center gap-4 pb-2 border-b border-slate-800">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Orders & Payments Log</h1>
-                    <p className="text-xs text-gray-500">Track incoming table orders, collection status, and razorpay logs</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        Orders & Payments Log <Receipt className="w-5 h-5 text-rose-500" />
+                    </h1>
+                    <p className="text-xs text-slate-400">Track incoming table orders, collection status, and razorpay logs</p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <div className="flex bg-white p-1 rounded-xl border border-gray-200 text-xs">
+                    <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
                         {['all', 'paid', 'pending'].map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setFilterPayment(p)}
-                                className={`px-3 py-1.5 rounded-lg capitalize font-bold transition-colors ${filterPayment === p ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
+                                className={`px-3 py-1.5 rounded-lg capitalize font-bold transition-colors ${filterPayment === p ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 {p === 'pending' ? 'Unpaid / Counter' : p}
                             </button>
@@ -53,17 +56,17 @@ export default function AdminOrders() {
                     </div>
                     <button
                         onClick={loadOrders}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl"
+                        className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
                     >
-                        🔄 Refresh
+                        <RefreshCw className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="text-center py-12 text-gray-400">Loading orders...</div>
+                <div className="text-center py-12 text-slate-500">Loading orders...</div>
             ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">No orders matching filter</div>
+                <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800">No orders matching filter</div>
             ) : (
                 <div className="space-y-4">
                     {filteredOrders.map((order) => {
@@ -71,37 +74,37 @@ export default function AdminOrders() {
                         const isPaid = order.payment_status === 'paid';
 
                         return (
-                            <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-3">
-                                <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-gray-100">
+                            <div key={order.id} className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 p-5 shadow-xl space-y-3">
+                                <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-slate-800">
                                     <div className="flex items-center gap-3">
-                                        <span className="text-lg font-black bg-gray-900 text-white px-3 py-1 rounded-xl">
+                                        <span className="text-base font-black bg-slate-800 text-white px-3 py-1 rounded-xl ring-1 ring-white/10">
                                             Table #{order.table_number}
                                         </span>
                                         <div>
-                                            <span className="font-bold text-gray-900 block text-sm">{order.customer_name || 'Guest'}</span>
-                                            <span className="text-xs text-gray-400 font-mono">{order.id} · {new Date(order.created_at).toLocaleString()}</span>
+                                            <span className="font-bold text-white block text-sm">{order.customer_name || 'Guest'}</span>
+                                            <span className="text-xs text-slate-500 font-mono">{order.id} · {new Date(order.created_at).toLocaleString()}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3">
                                         <div className="text-right">
-                                            <span className="text-xs text-gray-400 block font-medium">Order Status</span>
+                                            <span className="text-[11px] text-slate-400 block font-medium">Order Status</span>
                                             <select
                                                 value={order.status}
                                                 onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
-                                                className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 outline-none capitalize"
+                                                className="text-xs font-bold bg-slate-800 border border-slate-700 text-white rounded-lg px-2.5 py-1 outline-none capitalize focus:border-rose-500"
                                             >
-                                                <option value="pending">Pending</option>
-                                                <option value="preparing">Preparing</option>
-                                                <option value="ready">Ready</option>
-                                                <option value="completed">Completed</option>
-                                                <option value="cancelled">Cancelled</option>
+                                                <option value="pending" className="bg-slate-900">Pending</option>
+                                                <option value="preparing" className="bg-slate-900">Preparing</option>
+                                                <option value="ready" className="bg-slate-900">Ready</option>
+                                                <option value="completed" className="bg-slate-900">Completed</option>
+                                                <option value="cancelled" className="bg-slate-900">Cancelled</option>
                                             </select>
                                         </div>
 
-                                        <div className="text-right pl-3 border-l border-gray-100">
-                                            <span className="text-xs text-gray-400 block font-medium">Total Amount</span>
-                                            <span className="text-base font-black text-emerald-600">${Number(order.total_amount).toFixed(2)}</span>
+                                        <div className="text-right pl-3 border-l border-slate-800">
+                                            <span className="text-[11px] text-slate-400 block font-medium">Total Amount</span>
+                                            <span className="text-base font-black text-emerald-400">${Number(order.total_amount).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -109,38 +112,40 @@ export default function AdminOrders() {
                                 {/* Items Breakdown */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                     {items.map((item, idx) => (
-                                        <div key={idx} className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-xs flex justify-between items-center">
+                                        <div key={idx} className="bg-slate-800/50 p-2.5 rounded-xl border border-slate-800 text-xs flex justify-between items-center">
                                             <div>
-                                                <span className="font-bold text-gray-900 mr-1.5">{item.quantity}x</span>
-                                                <span className="font-medium text-gray-800">{item.dish_name || item.name}</span>
-                                                {item.portion_label && <span className="text-[10px] text-gray-500 block">Portion: {item.portion_label}</span>}
+                                                <span className="font-bold text-white mr-1.5">{item.quantity}x</span>
+                                                <span className="font-medium text-slate-200">{item.dish_name || item.name}</span>
+                                                {item.portion_label && <span className="text-[10px] text-amber-400 block font-normal">Portion: {item.portion_label}</span>}
                                             </div>
-                                            <span className="font-bold text-gray-700">${(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
+                                            <span className="font-mono text-slate-300 font-bold">${(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>
 
                                 {/* Payment Footer */}
-                                <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs bg-gray-50/50 p-3 rounded-xl">
+                                <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-950/50 p-3 rounded-xl border border-slate-850">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-gray-500">Method:</span>
-                                        <span className="font-bold text-gray-900 capitalize">{order.payment_method === 'razorpay' ? 'Razorpay Online 💳' : 'Pay at Counter 💵'}</span>
+                                        <span className="text-slate-400">Method:</span>
+                                        <span className="font-bold text-slate-200 capitalize flex items-center gap-1">
+                                            {order.payment_method === 'razorpay' ? <><CreditCard className="w-3.5 h-3.5 text-blue-400" /> Razorpay Online</> : <><DollarSign className="w-3.5 h-3.5 text-amber-400" /> Pay at Counter</>}
+                                        </span>
                                         {order.razorpay_payment_id && (
-                                            <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                                            <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">
                                                 ID: {order.razorpay_payment_id}
                                             </span>
                                         )}
                                     </div>
 
                                     <div className="flex items-center gap-3">
-                                        <span className={`font-bold px-2.5 py-1 rounded-full text-xs ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                                        <span className={`font-bold px-3 py-1 rounded-full text-xs border ${isPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                                             {isPaid ? 'PAID ✅' : 'UNPAID / COUNTER 💵'}
                                         </span>
 
                                         {!isPaid && (
                                             <button
                                                 onClick={() => handleMarkPaid(order.id)}
-                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition-colors shadow-md"
                                             >
                                                 Mark Paid & Collected
                                             </button>

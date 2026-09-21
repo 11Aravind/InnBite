@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../utils/apiService';
+import {
+    DollarSign,
+    ShoppingBag,
+    Flame,
+    Utensils,
+    TrendingUp,
+    ChevronRight,
+    Clock,
+    CheckCircle2,
+    AlertCircle
+} from 'lucide-react';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -26,82 +37,102 @@ export default function AdminDashboard() {
     const completedCount = orders.filter(o => o.status === 'completed').length;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 text-slate-100">
             {/* Header */}
-            <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-4 pb-2 border-b border-slate-800">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-                    <p className="text-xs text-gray-500">Live analytics and metrics for Orderly QR System</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        Dashboard Overview <TrendingUp className="w-5 h-5 text-rose-500" />
+                    </h1>
+                    <p className="text-xs text-slate-400">Live analytics and metrics for Orderly QR System</p>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => navigate('/kitchen')}
-                        className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-2"
-                    >
-                        <span>👨‍🍳 Open Live Kitchen View</span>
-                    </button>
-                </div>
+                <button
+                    onClick={() => navigate('/kitchen')}
+                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                >
+                    <Flame className="w-4 h-4" />
+                    <span>Open Live Kitchen Display</span>
+                </button>
             </div>
 
             {/* Metric Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-gray-400 uppercase">Total Revenue</span>
-                        <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl text-lg">💰</span>
+                <div className="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue</span>
+                        <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                            <DollarSign className="w-5 h-5" />
+                        </div>
                     </div>
-                    <div className="text-2xl font-black text-gray-900">${totalRevenue.toFixed(2)}</div>
-                    <span className="text-[11px] text-emerald-600 font-medium mt-1 block">Accumulated earnings</span>
+                    <div className="text-2xl font-black text-white">${totalRevenue.toFixed(2)}</div>
+                    <span className="text-[11px] text-emerald-400 font-medium mt-1.5 flex items-center gap-1">
+                        Accumulated earnings
+                    </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-gray-400 uppercase">Total Orders</span>
-                        <span className="p-2 bg-blue-50 text-blue-600 rounded-xl text-lg">🧾</span>
+                <div className="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Orders</span>
+                        <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                            <ShoppingBag className="w-5 h-5" />
+                        </div>
                     </div>
-                    <div className="text-2xl font-black text-gray-900">{orders.length}</div>
-                    <span className="text-[11px] text-gray-500 font-medium mt-1 block">{completedCount} completed orders</span>
+                    <div className="text-2xl font-black text-white">{orders.length}</div>
+                    <span className="text-[11px] text-slate-400 font-medium mt-1.5 block">
+                        {completedCount} completed orders
+                    </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-gray-400 uppercase">Pending Kitchen</span>
-                        <span className="p-2 bg-amber-50 text-amber-600 rounded-xl text-lg">🍳</span>
+                <div className="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Kitchen</span>
+                        <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                            <Flame className="w-5 h-5" />
+                        </div>
                     </div>
-                    <div className="text-2xl font-black text-amber-600">{pendingCount}</div>
-                    <span className="text-[11px] text-amber-600 font-medium mt-1 block">Active in kitchen</span>
+                    <div className="text-2xl font-black text-amber-400">{pendingCount}</div>
+                    <span className="text-[11px] text-amber-400 font-medium mt-1.5 block">
+                        Active in kitchen
+                    </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-gray-400 uppercase">Active Menu Items</span>
-                        <span className="p-2 bg-purple-50 text-purple-600 rounded-xl text-lg">🍔</span>
+                <div className="bg-slate-900/80 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-xl">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Menu Items</span>
+                        <div className="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
+                            <Utensils className="w-5 h-5" />
+                        </div>
                     </div>
-                    <div className="text-2xl font-black text-gray-900">{dishesCount}</div>
-                    <span className="text-[11px] text-gray-500 font-medium mt-1 block">{tablesCount} QR tables registered</span>
+                    <div className="text-2xl font-black text-white">{dishesCount}</div>
+                    <span className="text-[11px] text-slate-400 font-medium mt-1.5 block">
+                        {tablesCount} registered QR tables
+                    </span>
                 </div>
             </div>
 
             {/* Recent Orders Table */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-base font-bold text-gray-900">Recent Customer Orders</h2>
+            <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 shadow-xl p-6">
+                <div className="flex justify-between items-center mb-5">
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-rose-400" /> Recent Customer Orders
+                    </h2>
                     <button
                         onClick={() => navigate('/admin/orders')}
-                        className="text-xs font-semibold text-amber-600 hover:text-amber-700"
+                        className="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
                     >
-                        View All Orders →
+                        <span>View All Orders</span>
+                        <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-8 text-gray-400">Loading order data...</div>
+                    <div className="text-center py-8 text-slate-500">Loading order data...</div>
                 ) : orders.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400">No orders placed yet</div>
+                    <div className="text-center py-10 text-slate-500">No orders placed yet</div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-gray-600">
-                            <thead className="bg-gray-50 text-xs font-semibold text-gray-400 uppercase border-b border-gray-100">
+                        <table className="w-full text-left text-sm text-slate-300">
+                            <thead className="bg-slate-800/60 text-xs font-bold text-slate-400 uppercase border-b border-slate-800">
                                 <tr>
                                     <th className="px-4 py-3">Table</th>
                                     <th className="px-4 py-3">Customer</th>
@@ -111,23 +142,23 @@ export default function AdminDashboard() {
                                     <th className="px-4 py-3">Time</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-slate-800/60">
                                 {orders.slice(0, 5).map((order) => (
-                                    <tr key={order.id} className="hover:bg-gray-50/50">
-                                        <td className="px-4 py-3 font-bold text-gray-900">Table #{order.table_number}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-800">{order.customer_name || 'Guest'}</td>
-                                        <td className="px-4 py-3 font-bold text-emerald-600">${Number(order.total_amount).toFixed(2)}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${order.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
+                                        <td className="px-4 py-3.5 font-bold text-white">Table #{order.table_number}</td>
+                                        <td className="px-4 py-3.5 font-medium text-slate-200">{order.customer_name || 'Guest'}</td>
+                                        <td className="px-4 py-3.5 font-bold text-emerald-400">${Number(order.total_amount).toFixed(2)}</td>
+                                        <td className="px-4 py-3.5">
+                                            <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${order.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
                                                 {order.payment_status === 'paid' ? 'Paid' : 'Counter'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-xs font-semibold capitalize text-gray-700">
+                                        <td className="px-4 py-3.5">
+                                            <span className="text-xs font-semibold capitalize text-slate-300">
                                                 {order.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-gray-400">
+                                        <td className="px-4 py-3.5 text-xs text-slate-500">
                                             {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                     </tr>

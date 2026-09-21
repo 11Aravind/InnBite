@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
+import { Flame, RefreshCw, LayoutDashboard, Home, CheckCircle2, Clock, ChefHat } from 'lucide-react';
 
 export default function KitchenView() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'preparing', 'ready'
+    const [filterStatus, setFilterStatus] = useState('all');
 
     const loadOrders = async () => {
         setLoading(true);
@@ -19,12 +20,10 @@ export default function KitchenView() {
     useEffect(() => {
         loadOrders();
 
-        // Interval poll as fallback
         const interval = setInterval(() => {
             loadOrders();
         }, 5000);
 
-        // Supabase Realtime Listener if configured
         let subscription;
         if (isSupabaseConfigured && supabase) {
             subscription = supabase
@@ -57,26 +56,28 @@ export default function KitchenView() {
         : activeOrders.filter(o => o.status === filterStatus);
 
     return (
-        <div className="min-h-screen bg-gray-950 text-white p-4 font-sans">
+        <div className="min-h-screen bg-slate-950 text-white p-4 md:p-6 font-sans selection:bg-rose-500 selection:text-white">
             {/* Top Bar */}
-            <div className="flex flex-wrap items-center justify-between pb-4 mb-6 border-b border-gray-800 gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xl">
-                        👨‍🍳
+            <div className="flex flex-wrap items-center justify-between pb-4 mb-6 border-b border-slate-800/80 gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-orange-500 flex items-center justify-center font-bold text-white shadow-lg shadow-rose-500/25">
+                        <Flame className="w-6 h-6" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">Kitchen Live Order Board</h1>
-                        <p className="text-xs text-gray-400">Real-time table order queue for cooks & staff</p>
+                        <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                            Kitchen Live Order Board
+                        </h1>
+                        <p className="text-xs text-slate-400">Real-time table order queue for cooks & staff</p>
                     </div>
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex items-center gap-2 bg-gray-900 p-1.5 rounded-xl border border-gray-800 text-sm">
+                <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800 text-sm">
                     {['all', 'pending', 'preparing', 'ready'].map((st) => (
                         <button
                             key={st}
                             onClick={() => setFilterStatus(st)}
-                            className={`px-3 py-1.5 rounded-lg capitalize font-medium transition-colors ${filterStatus === st ? 'bg-amber-500 text-black font-bold' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3.5 py-1.5 rounded-lg capitalize font-bold text-xs transition-all ${filterStatus === st ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
                         >
                             {st} ({st === 'all' ? activeOrders.length : activeOrders.filter(o => o.status === st).length})
                         </button>
@@ -86,33 +87,33 @@ export default function KitchenView() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadOrders}
-                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg font-medium"
+                        className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-colors"
                     >
-                        🔄 Refresh
+                        <RefreshCw className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => navigate('/admin')}
-                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg font-medium"
+                        className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs rounded-xl border border-slate-800 font-bold flex items-center gap-1.5"
                     >
-                        ⚙️ Admin Portal
+                        <LayoutDashboard className="w-4 h-4 text-rose-400" /> Admin Portal
                     </button>
                     <button
                         onClick={() => navigate('/')}
-                        className="px-3 py-1.5 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 text-xs rounded-lg font-medium"
+                        className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs rounded-xl border border-rose-500/20 font-bold flex items-center gap-1.5"
                     >
-                        🏠 Customer Menu
+                        <Home className="w-4 h-4" /> Customer Menu
                     </button>
                 </div>
             </div>
 
             {/* Orders Cards Grid */}
             {loading && orders.length === 0 ? (
-                <div className="text-center py-20 text-gray-500">Loading kitchen orders...</div>
+                <div className="text-center py-20 text-slate-500">Loading kitchen orders...</div>
             ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-20 text-gray-600 bg-gray-900/40 rounded-3xl border border-gray-900">
-                    <span className="text-4xl block mb-2">🍽️</span>
-                    <p className="text-lg font-semibold text-gray-400">No active kitchen orders</p>
-                    <p className="text-xs text-gray-600">Orders placed by customers will appear here automatically</p>
+                <div className="text-center py-20 text-slate-500 bg-slate-900/40 rounded-3xl border border-slate-900">
+                    <ChefHat className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                    <p className="text-lg font-bold text-slate-400">No active kitchen orders</p>
+                    <p className="text-xs text-slate-600">Orders placed by customers will appear here automatically</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -123,52 +124,53 @@ export default function KitchenView() {
                         return (
                             <div
                                 key={order.id}
-                                className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${order.status === 'pending'
-                                        ? 'bg-amber-950/30 border-amber-500/40 shadow-lg shadow-amber-500/5'
+                                className={`flex flex-col justify-between rounded-2xl border p-4.5 transition-all shadow-xl ${order.status === 'pending'
+                                        ? 'bg-amber-950/20 border-amber-500/30 ring-1 ring-amber-500/20'
                                         : order.status === 'preparing'
-                                            ? 'bg-blue-950/30 border-blue-500/40'
-                                            : 'bg-emerald-950/30 border-emerald-500/40'
+                                            ? 'bg-blue-950/20 border-blue-500/30'
+                                            : 'bg-emerald-950/20 border-emerald-500/30'
                                     }`}
                             >
                                 <div>
                                     {/* Card Header: Table # & Status Badge */}
-                                    <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-2xl font-black text-white bg-gray-800 px-3 py-1 rounded-xl border border-gray-700">
+                                    <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="text-2xl font-black text-white bg-slate-900 px-3 py-1 rounded-xl ring-1 ring-white/10">
                                                 T-{order.table_number}
                                             </span>
                                             <div>
-                                                <span className="text-xs text-gray-400 block font-medium">Customer</span>
-                                                <span className="text-sm font-semibold text-gray-200">{order.customer_name || 'Guest'}</span>
+                                                <span className="text-[10px] text-slate-400 block font-medium uppercase">Customer</span>
+                                                <span className="text-sm font-bold text-slate-200">{order.customer_name || 'Guest'}</span>
                                             </div>
                                         </div>
 
                                         <div className="flex flex-col items-end gap-1">
-                                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${order.status === 'pending'
-                                                    ? 'bg-amber-500 text-black animate-pulse'
+                                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${order.status === 'pending'
+                                                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse'
                                                     : order.status === 'preparing'
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-emerald-500 text-black'
+                                                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                                                 }`}>
                                                 {order.status}
                                             </span>
-                                            <span className="text-[10px] text-gray-400">
+                                            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
                                                 {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Payment Badge */}
-                                    <div className="flex items-center justify-between bg-gray-900/80 px-3 py-1.5 rounded-lg mb-3 border border-gray-800 text-xs">
-                                        <span className="text-gray-400">Payment:</span>
+                                    <div className="flex items-center justify-between bg-slate-900/80 px-3 py-2 rounded-xl mb-3 border border-slate-800 text-xs">
+                                        <span className="text-slate-400">Payment:</span>
                                         <div className="flex items-center gap-2">
-                                            <span className={`font-semibold ${isPaid ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                            <span className={`font-bold ${isPaid ? 'text-emerald-400' : 'text-amber-400'}`}>
                                                 {isPaid ? 'Paid ✅' : 'Pay at Counter 💵'}
                                             </span>
                                             {!isPaid && (
                                                 <button
                                                     onClick={() => handleMarkPaid(order.id)}
-                                                    className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded font-bold"
+                                                    className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded font-bold transition-colors"
                                                 >
                                                     Mark Paid
                                                 </button>
@@ -179,31 +181,31 @@ export default function KitchenView() {
                                     {/* Ordered Items List */}
                                     <div className="space-y-2 mb-4">
                                         {items.map((item, idx) => (
-                                            <div key={idx} className="flex justify-between items-start text-sm bg-gray-900/60 p-2 rounded-lg border border-gray-850">
+                                            <div key={idx} className="flex justify-between items-start text-sm bg-slate-900/60 p-2.5 rounded-xl border border-slate-850">
                                                 <div>
-                                                    <span className="font-bold text-white mr-2">{item.quantity}x</span>
-                                                    <span className="text-gray-200 font-medium">{item.dish_name || item.name}</span>
+                                                    <span className="font-extrabold text-white mr-2">{item.quantity}x</span>
+                                                    <span className="text-slate-200 font-medium">{item.dish_name || item.name}</span>
                                                     {item.portion_label && (
                                                         <span className="text-xs text-amber-400 block font-normal">Portion: {item.portion_label}</span>
                                                     )}
                                                 </div>
-                                                <span className="text-xs text-gray-400 font-mono">${(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
+                                                <span className="text-xs text-slate-400 font-mono">${(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
                                 {/* Status Progress Action Buttons */}
-                                <div className="pt-3 border-t border-gray-800 flex items-center justify-between gap-2">
-                                    <span className="text-sm font-bold text-gray-300">
-                                        Total: ${Number(order.total_amount).toFixed(2)}
+                                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                                    <span className="text-sm font-black text-slate-200">
+                                        ${Number(order.total_amount).toFixed(2)}
                                     </span>
 
                                     <div className="flex gap-1.5">
                                         {order.status === 'pending' && (
                                             <button
                                                 onClick={() => handleStatusUpdate(order.id, 'preparing')}
-                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors"
+                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors shadow-md"
                                             >
                                                 Start Preparing 🍳
                                             </button>
@@ -211,7 +213,7 @@ export default function KitchenView() {
                                         {order.status === 'preparing' && (
                                             <button
                                                 onClick={() => handleStatusUpdate(order.id, 'ready')}
-                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-colors"
+                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-colors shadow-md"
                                             >
                                                 Mark Ready 🔔
                                             </button>
@@ -219,7 +221,7 @@ export default function KitchenView() {
                                         {order.status === 'ready' && (
                                             <button
                                                 onClick={() => handleStatusUpdate(order.id, 'completed')}
-                                                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded-lg transition-colors"
+                                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors"
                                             >
                                                 Complete Order ✅
                                             </button>

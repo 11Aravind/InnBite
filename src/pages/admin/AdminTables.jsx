@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiService } from '../../utils/apiService';
+import { Plus, Printer, Trash2, QrCode, Sparkles } from 'lucide-react';
 
 export default function AdminTables() {
     const [tables, setTables] = useState([]);
@@ -40,11 +41,13 @@ export default function AdminTables() {
     const baseUrl = window.location.origin;
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4 print:hidden">
+        <div className="space-y-6 text-slate-100">
+            <div className="flex flex-wrap justify-between items-center gap-4 pb-2 border-b border-slate-800 print:hidden">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Table & QR Code Management</h1>
-                    <p className="text-xs text-gray-500">Generate, view, and print table QR codes for instant ordering</p>
+                    <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        Table & QR Code Management <QrCode className="w-5 h-5 text-rose-500" />
+                    </h1>
+                    <p className="text-xs text-slate-400">Generate, view, and print table QR codes for instant ordering</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -56,29 +59,30 @@ export default function AdminTables() {
                             min="1"
                             value={newTableNum}
                             onChange={(e) => setNewTableNum(e.target.value)}
-                            className="w-24 h-10 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
+                            className="w-24 h-10 px-3 bg-slate-900 border border-slate-700 rounded-xl text-sm outline-none text-white focus:border-rose-500"
                         />
                         <button
                             type="submit"
-                            className="h-10 px-4 bg-black text-white text-xs font-bold rounded-xl hover:bg-gray-800"
+                            className="h-10 px-4 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5"
                         >
-                            + Add Table
+                            <Plus className="w-4 h-4" /> Add Table
                         </button>
                     </form>
 
                     <button
                         onClick={handlePrint}
-                        className="h-10 px-4 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl hover:bg-amber-400 flex items-center gap-2"
+                        className="h-10 px-4 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
                     >
-                        <span>🖨️ Print All QR Cards</span>
+                        <Printer className="w-4 h-4" />
+                        <span>Print All QR Cards</span>
                     </button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="text-center py-12 text-gray-400">Loading tables...</div>
+                <div className="text-center py-12 text-slate-500">Loading tables...</div>
             ) : tables.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100">No tables registered</div>
+                <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800">No tables registered</div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {tables.map((tbl) => {
@@ -87,34 +91,36 @@ export default function AdminTables() {
                         return (
                             <div
                                 key={tbl.id}
-                                className="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex flex-col items-center text-center justify-between print:border-2 print:border-black print:break-inside-avoid"
+                                className="bg-slate-900/90 backdrop-blur-md rounded-3xl p-5 border border-slate-800 shadow-xl flex flex-col items-center text-center justify-between print:bg-white print:text-black print:border-2 print:border-black print:break-inside-avoid"
                             >
-                                <div className="w-full pb-3 border-b border-gray-100 mb-3 flex items-center justify-between">
-                                    <span className="text-xs font-bold text-amber-600 tracking-wider uppercase">Orderly Table</span>
+                                <div className="w-full pb-3 border-b border-slate-800 print:border-gray-200 mb-3 flex items-center justify-between">
+                                    <span className="text-xs font-black text-rose-500 tracking-wider uppercase flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3" /> Orderly Table
+                                    </span>
                                     <button
                                         onClick={() => handleDeleteTable(tbl.id)}
-                                        className="text-xs text-red-500 hover:text-red-700 font-bold print:hidden"
+                                        className="text-xs text-rose-400 hover:text-rose-300 font-bold print:hidden p-1"
                                     >
-                                        Delete
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
 
                                 {/* QR Code SVG */}
-                                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 my-2">
+                                <div className="p-3 bg-white rounded-2xl border border-slate-700 shadow-inner my-2">
                                     <QRCodeSVG
                                         value={qrUrl}
                                         size={140}
                                         bgColor={"#ffffff"}
-                                        fgColor={"#171212"}
+                                        fgColor={"#0f172a"}
                                         level={"H"}
                                         includeMargin={false}
                                     />
                                 </div>
 
                                 <div className="mt-3">
-                                    <h2 className="text-2xl font-black text-gray-900">Table #{tbl.table_number}</h2>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">Scan to View Menu & Order</p>
-                                    <span className="text-[10px] text-gray-400 font-mono block mt-1 select-all">{qrUrl}</span>
+                                    <h2 className="text-2xl font-black text-white print:text-black">Table #{tbl.table_number}</h2>
+                                    <p className="text-[11px] text-slate-400 print:text-gray-600 mt-0.5 font-medium">Scan to View Menu & Order</p>
+                                    <span className="text-[10px] text-slate-500 font-mono block mt-1 select-all">{qrUrl}</span>
                                 </div>
                             </div>
                         );
