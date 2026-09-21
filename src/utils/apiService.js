@@ -2,7 +2,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { foodDataMap } from '../data/foodData';
 import { categoriesData } from '../data/categoryData';
 
-// Local storage keys for fallback state
+// Local storage keys for instant caching
 const MOCK_ORDERS_KEY = 'orderly_mock_orders';
 const MOCK_TABLES_KEY = 'orderly_mock_tables';
 const MOCK_DISHES_KEY = 'orderly_mock_dishes';
@@ -24,6 +24,15 @@ const setLocalStore = (key, data) => {
     } catch (err) {
         console.error('LocalStorage write error:', err);
     }
+};
+
+// Helper: Fast timeout promise wrapper (1.5 seconds max) to prevent network lag
+const fetchWithTimeout = (promise, ms = 1500) => {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
 };
 
 const initialTables = [
@@ -50,14 +59,20 @@ const initialBanners = [
 ];
 
 export const apiService = {
+    // ----------------------------------------------------
+    // INSTANT READ: Home Page Data
+    // ----------------------------------------------------
     async getHomePageData() {
         if (isSupabaseConfigured) {
             try {
-                const [bannersRes, dishesRes, categoriesRes] = await Promise.all([
-                    supabase.from('banners').select('*'),
-                    supabase.from('dishes').select('*').eq('is_available', true),
-                    supabase.from('categories').select('*').order('display_order', { ascending: true })
-                ]);
+                const [bannersRes, dishesRes, categoriesRes] = await fetchWithTimeout(
+                    Promise.all([
+                        supabase.from('banners').select('*'),
+                        supabase.from('dishes').select('*').eq('is_available', true),
+                        supabase.from('categories').select('*').order('display_order', { ascending: true })
+                    ]),
+                    1500
+                );
 
                 if (!bannersRes.error && !dishesRes.error && !categoriesRes.error) {
                     const banners = bannersRes.data || [];
@@ -65,8 +80,13 @@ export const apiService = {
                     const categories = categoriesRes.data || [];
 
                     if (categories.length > 0 || allDishes.length > 0) {
+                        // Cache for instant future loads
+                        setLocalStore(MOCK_DISHES_KEY, allDishes);
+                        setLocalStore(MOCK_CATEGORIES_KEY, categories);
+                        if (banners.length > 0) setLocalStore(MOCK_BANNERS_KEY, banners);
+
                         return {
-                            banners,
+                            banners: banners.length > 0 ? banners : initialBanners,
                             popular_dishes: allDishes.filter(d => d.is_popular),
                             todays_specials: allDishes.filter(d => d.is_special),
                             categories
@@ -74,7 +94,7 @@ export const apiService = {
                     }
                 }
             } catch (err) {
-                console.warn('Supabase home data fetch error, using fallback:', err);
+                console.warn('Supabase fetch timeout/error, serving instant local cache:', err);
             }
         }
 
@@ -84,8 +104,8 @@ export const apiService = {
 
         return {
             banners: bannersList,
-            popular_dishes: dishesList.slice(0, 3),
-            todays_specials: dishesList.filter(d => d.is_special || d.basePrice > 12),
+            popular_dishes: dishesList.filter(d => d.is_popular || d.isPopular).slice(0, 4),
+            todays_specials: dishesList.filter(d => d.is_special || d.isSpecial || Number(d.basePrice || d.base_price) > 12),
             categories: categoriesList
         };
     },
@@ -93,10 +113,16 @@ export const apiService = {
     async getCategories() {
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase.from('categories').select('*').order('display_order', { ascending: true });
-                if (!error && data && data.length > 0) return data;
+                const { data, error } = await fetchWithTimeout(
+                    supabase.from('categories').select('*').order('display_order', { ascending: true }),
+                    1500
+                );
+                if (!error && data && data.length > 0) {
+                    setLocalStore(MOCK_CATEGORIES_KEY, data);
+                    return data;
+                }
             } catch (err) {
-                console.warn('Supabase categories fetch error:', err);
+                console.warn('Supabase categories timeout:', err);
             }
         }
         return getLocalStore(MOCK_CATEGORIES_KEY, categoriesData);
@@ -107,10 +133,13 @@ export const apiService = {
             try {
                 let query = supabase.from('dishes').select('*');
                 if (categoryId) query = query.eq('category_id', categoryId);
-                const { data, error } = await query;
-                if (!error && data && data.length > 0) return data;
+                const { data, error } = await fetchWithTimeout(query, 1500);
+                if (!error && data && data.length > 0) {
+                    if (!categoryId) setLocalStore(MOCK_DISHES_KEY, data);
+                    return data;
+                }
             } catch (err) {
-                console.warn('Supabase dishes fetch error:', err);
+                console.warn('Supabase dishes timeout:', err);
             }
         }
 
@@ -124,17 +153,22 @@ export const apiService = {
     async getDishById(id) {
         if (isSupabaseConfigured) {
             try {
-                // Use maybeSingle() instead of single() to avoid PGRST116 (0 rows error)
-                const { data, error } = await supabase.from('dishes').select('*').eq('id', id).maybeSingle();
+                const { data, error } = await fetchWithTimeout(
+                    supabase.from('dishes').select('*').eq('id', id).maybeSingle(),
+                    1500
+                );
                 if (!error && data) return data;
             } catch (err) {
-                console.warn('Supabase single dish fetch error:', err);
+                console.warn('Supabase dish fetch timeout:', err);
             }
         }
         const allDishes = getLocalStore(MOCK_DISHES_KEY, Object.values(foodDataMap));
         return allDishes.find(d => d.id === id) || foodDataMap[id] || null;
     },
 
+    // ----------------------------------------------------
+    // OPTIMISTIC WRITE: Create Order (0ms UI Latency)
+    // ----------------------------------------------------
     async createOrder(orderPayload) {
         const newOrder = {
             id: 'ord-' + Date.now(),
@@ -150,96 +184,90 @@ export const apiService = {
             order_items: orderPayload.items || []
         };
 
-        if (isSupabaseConfigured) {
-            try {
-                // Check existing dish IDs in Supabase to avoid 23503 foreign key error
-                const { data: dbDishes } = await supabase.from('dishes').select('id');
-                const validDishIds = new Set((dbDishes || []).map(d => d.id));
-
-                const { data: insertedOrder, error: orderErr } = await supabase
-                    .from('orders')
-                    .insert([{
-                        table_number: newOrder.table_number,
-                        customer_name: newOrder.customer_name,
-                        customer_phone: newOrder.customer_phone,
-                        total_amount: newOrder.total_amount,
-                        status: newOrder.status,
-                        payment_method: newOrder.payment_method,
-                        payment_status: newOrder.payment_status,
-                        razorpay_payment_id: newOrder.razorpay_payment_id
-                    }])
-                    .select()
-                    .single();
-
-                if (!orderErr && insertedOrder) {
-                    const itemsToInsert = (orderPayload.items || []).map(item => {
-                        const rawDishId = item.dish_id || item.id;
-                        return {
-                            order_id: insertedOrder.id,
-                            dish_id: validDishIds.has(rawDishId) ? rawDishId : null, // FK safety check!
-                            dish_name: item.name,
-                            portion_label: item.portion || 'Regular',
-                            unit_price: item.price,
-                            quantity: item.quantity,
-                            subtotal: item.price * item.quantity
-                        };
-                    });
-
-                    await supabase.from('order_items').insert(itemsToInsert);
-                    return { success: true, order: insertedOrder };
-                }
-            } catch (err) {
-                console.warn('Supabase createOrder error, using local fallback:', err);
-            }
-        }
-
+        // 1. Optimistic Local Save (Instant 0ms UI feedback)
         const existingOrders = getLocalStore(MOCK_ORDERS_KEY, []);
         const updatedOrders = [newOrder, ...existingOrders];
         setLocalStore(MOCK_ORDERS_KEY, updatedOrders);
+
+        // 2. Background Sync to Supabase
+        if (isSupabaseConfigured) {
+            (async () => {
+                try {
+                    const { data: dbDishes } = await supabase.from('dishes').select('id');
+                    const validDishIds = new Set((dbDishes || []).map(d => d.id));
+
+                    const { data: insertedOrder, error: orderErr } = await supabase
+                        .from('orders')
+                        .insert([{
+                            table_number: newOrder.table_number,
+                            customer_name: newOrder.customer_name,
+                            customer_phone: newOrder.customer_phone,
+                            total_amount: newOrder.total_amount,
+                            status: newOrder.status,
+                            payment_method: newOrder.payment_method,
+                            payment_status: newOrder.payment_status,
+                            razorpay_payment_id: newOrder.razorpay_payment_id
+                        }])
+                        .select()
+                        .single();
+
+                    if (!orderErr && insertedOrder) {
+                        const itemsToInsert = (orderPayload.items || []).map(item => {
+                            const rawDishId = item.dish_id || item.id;
+                            return {
+                                order_id: insertedOrder.id,
+                                dish_id: validDishIds.has(rawDishId) ? rawDishId : null,
+                                dish_name: item.name,
+                                portion_label: item.portion || 'Regular',
+                                unit_price: item.price,
+                                quantity: item.quantity,
+                                subtotal: item.price * item.quantity
+                            };
+                        });
+                        await supabase.from('order_items').insert(itemsToInsert);
+                    }
+                } catch (err) {
+                    console.warn('Background Supabase order sync error:', err);
+                }
+            })();
+        }
+
         return { success: true, order: newOrder };
     },
 
     async getOrders() {
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase
-                    .from('orders')
-                    .select('*, order_items(*)')
-                    .order('created_at', { ascending: false });
-                if (!error && data) return data;
+                const { data, error } = await fetchWithTimeout(
+                    supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }),
+                    1500
+                );
+                if (!error && data) {
+                    setLocalStore(MOCK_ORDERS_KEY, data);
+                    return data;
+                }
             } catch (err) {
-                console.warn('Supabase fetch orders error:', err);
+                console.warn('Supabase fetch orders timeout:', err);
             }
         }
         return getLocalStore(MOCK_ORDERS_KEY, []);
     },
 
     async updateOrderStatus(orderId, status) {
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('orders').update({ status }).eq('id', orderId);
-            } catch (err) {
-                console.warn('Supabase update order status error:', err);
-            }
-        }
-
+        // 1. Instant local update
         const orders = getLocalStore(MOCK_ORDERS_KEY, []);
         const updated = orders.map(o => o.id === orderId ? { ...o, status } : o);
         setLocalStore(MOCK_ORDERS_KEY, updated);
+
+        // 2. Background sync
+        if (isSupabaseConfigured) {
+            supabase.from('orders').update({ status }).eq('id', orderId).then();
+        }
         return true;
     },
 
     async updatePaymentStatus(orderId, payment_status, razorpay_payment_id = null) {
-        if (isSupabaseConfigured) {
-            try {
-                const updatePayload = { payment_status };
-                if (razorpay_payment_id) updatePayload.razorpay_payment_id = razorpay_payment_id;
-                await supabase.from('orders').update(updatePayload).eq('id', orderId);
-            } catch (err) {
-                console.warn('Supabase update payment status error:', err);
-            }
-        }
-
+        // 1. Instant local update
         const orders = getLocalStore(MOCK_ORDERS_KEY, []);
         const updated = orders.map(o => o.id === orderId ? {
             ...o,
@@ -247,16 +275,29 @@ export const apiService = {
             ...(razorpay_payment_id ? { razorpay_payment_id } : {})
         } : o);
         setLocalStore(MOCK_ORDERS_KEY, updated);
+
+        // 2. Background sync
+        if (isSupabaseConfigured) {
+            const updatePayload = { payment_status };
+            if (razorpay_payment_id) updatePayload.razorpay_payment_id = razorpay_payment_id;
+            supabase.from('orders').update(updatePayload).eq('id', orderId).then();
+        }
         return true;
     },
 
     async getTables() {
         if (isSupabaseConfigured) {
             try {
-                const { data, error } = await supabase.from('tables').select('*').order('table_number', { ascending: true });
-                if (!error && data && data.length > 0) return data;
+                const { data, error } = await fetchWithTimeout(
+                    supabase.from('tables').select('*').order('table_number', { ascending: true }),
+                    1500
+                );
+                if (!error && data && data.length > 0) {
+                    setLocalStore(MOCK_TABLES_KEY, data);
+                    return data;
+                }
             } catch (err) {
-                console.warn('Supabase tables fetch error:', err);
+                console.warn('Supabase tables timeout:', err);
             }
         }
         return getLocalStore(MOCK_TABLES_KEY, initialTables);
@@ -269,35 +310,31 @@ export const apiService = {
             status: 'active'
         };
 
-        if (isSupabaseConfigured) {
-            try {
-                const { data, error } = await supabase.from('tables').insert([{ table_number: Number(tableNumber) }]).select().single();
-                if (!error && data) return data;
-            } catch (err) {
-                console.warn('Supabase createTable error:', err);
-            }
-        }
-
         const tables = getLocalStore(MOCK_TABLES_KEY, initialTables);
         const updated = [...tables, newTable];
         setLocalStore(MOCK_TABLES_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('tables').insert([{ table_number: Number(tableNumber) }]).then();
+        }
+
         return newTable;
     },
 
     async deleteTable(tableId) {
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('tables').delete().eq('id', tableId);
-            } catch (err) {
-                console.warn('Supabase delete table error:', err);
-            }
-        }
         const tables = getLocalStore(MOCK_TABLES_KEY, initialTables);
         const updated = tables.filter(t => t.id !== tableId);
         setLocalStore(MOCK_TABLES_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('tables').delete().eq('id', tableId).then();
+        }
         return true;
     },
 
+    // ----------------------------------------------------
+    // OPTIMISTIC DISH CRUD: Instant 0ms Admin Saving
+    // ----------------------------------------------------
     async saveDish(dishPayload) {
         const dishData = {
             ...dishPayload,
@@ -306,14 +343,7 @@ export const apiService = {
             id: dishPayload.id || dishPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4)
         };
 
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('dishes').upsert([dishData]);
-            } catch (err) {
-                console.warn('Supabase saveDish exception:', err);
-            }
-        }
-
+        // 1. Instant local update (0ms UI latency)
         const dishes = getLocalStore(MOCK_DISHES_KEY, Object.values(foodDataMap));
         const index = dishes.findIndex(d => d.id === dishData.id);
         let updated;
@@ -324,20 +354,23 @@ export const apiService = {
             updated = [dishData, ...dishes];
         }
         setLocalStore(MOCK_DISHES_KEY, updated);
+
+        // 2. Background sync to Supabase
+        if (isSupabaseConfigured) {
+            supabase.from('dishes').upsert([dishData]).then();
+        }
+
         return dishData;
     },
 
     async deleteDish(dishId) {
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('dishes').delete().eq('id', dishId);
-            } catch (err) {
-                console.warn('Supabase delete dish error:', err);
-            }
-        }
         const dishes = getLocalStore(MOCK_DISHES_KEY, Object.values(foodDataMap));
         const updated = dishes.filter(d => d.id !== dishId);
         setLocalStore(MOCK_DISHES_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('dishes').delete().eq('id', dishId).then();
+        }
         return true;
     },
 
@@ -346,14 +379,6 @@ export const apiService = {
             ...categoryPayload,
             id: categoryPayload.id || categoryPayload.name.toLowerCase().replace(/\s+/g, '-')
         };
-
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('categories').upsert([categoryData]);
-            } catch (err) {
-                console.warn('Supabase save category error:', err);
-            }
-        }
 
         const categories = getLocalStore(MOCK_CATEGORIES_KEY, categoriesData);
         const index = categories.findIndex(c => c.id === categoryData.id);
@@ -365,20 +390,22 @@ export const apiService = {
             updated = [...categories, categoryData];
         }
         setLocalStore(MOCK_CATEGORIES_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('categories').upsert([categoryData]).then();
+        }
+
         return categoryData;
     },
 
     async deleteCategory(categoryId) {
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('categories').delete().eq('id', categoryId);
-            } catch (err) {
-                console.warn('Supabase delete category error:', err);
-            }
-        }
         const categories = getLocalStore(MOCK_CATEGORIES_KEY, categoriesData);
         const updated = categories.filter(c => c.id !== categoryId);
         setLocalStore(MOCK_CATEGORIES_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('categories').delete().eq('id', categoryId).then();
+        }
         return true;
     },
 
@@ -387,14 +414,6 @@ export const apiService = {
             ...bannerPayload,
             id: bannerPayload.id || 'banner-' + Date.now()
         };
-
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('banners').upsert([bannerData]);
-            } catch (err) {
-                console.warn('Supabase save banner error:', err);
-            }
-        }
 
         const banners = getLocalStore(MOCK_BANNERS_KEY, initialBanners);
         const index = banners.findIndex(b => b.id === bannerData.id);
@@ -406,20 +425,22 @@ export const apiService = {
             updated = [...banners, bannerData];
         }
         setLocalStore(MOCK_BANNERS_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('banners').upsert([bannerData]).then();
+        }
+
         return bannerData;
     },
 
     async deleteBanner(bannerId) {
-        if (isSupabaseConfigured) {
-            try {
-                await supabase.from('banners').delete().eq('id', bannerId);
-            } catch (err) {
-                console.warn('Supabase delete banner error:', err);
-            }
-        }
         const banners = getLocalStore(MOCK_BANNERS_KEY, initialBanners);
         const updated = banners.filter(b => b.id !== bannerId);
         setLocalStore(MOCK_BANNERS_KEY, updated);
+
+        if (isSupabaseConfigured) {
+            supabase.from('banners').delete().eq('id', bannerId).then();
+        }
         return true;
     }
 };
