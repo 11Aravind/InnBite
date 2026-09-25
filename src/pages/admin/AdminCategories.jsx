@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../utils/apiService';
-import { Plus, Edit2, Trash2, FolderKanban, X } from 'lucide-react';
+import DataTable from '../../components/DataTable';
+import { ImageFileInput } from '../../components/ImageUploadCropModal';
+import {
+    Plus,
+    Edit2,
+    Trash2,
+    FolderKanban,
+    X
+} from 'lucide-react';
 
 export default function AdminCategories() {
     const [categories, setCategories] = useState([]);
@@ -58,56 +66,106 @@ export default function AdminCategories() {
         }
     };
 
+    // TanStack Table Column Definitions
+    const columns = useMemo(() => [
+        {
+            accessorKey: 'name',
+            header: 'Category Details',
+            cell: ({ row }) => {
+                const cat = row.original;
+                const img = cat.image_url || cat.image || '/placeholderfood.png';
+                return (
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-2xs">
+                            <img src={img} alt={cat.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{cat.name}</h4>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            accessorKey: 'description',
+            header: 'Description',
+            cell: ({ row }) => {
+                const desc = row.original.description;
+                return (
+                    <span className="text-slate-600 font-medium">
+                        {desc || <span className="text-slate-400 italic">No description</span>}
+                    </span>
+                );
+            }
+        },
+        {
+            accessorKey: 'id',
+            header: 'Category Code / ID',
+            cell: ({ row }) => (
+                <span className="font-mono text-slate-500 text-xs font-bold">{row.original.id}</span>
+            )
+        },
+        {
+            id: 'actions',
+            header: 'Actions',
+            meta: { align: 'right', headerAlign: 'right' },
+            cell: ({ row }) => {
+                const cat = row.original;
+                return (
+                    <div className="flex items-center justify-end gap-1.5">
+                        <button
+                            onClick={() => handleOpenModal(cat)}
+                            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                            title="Edit Category"
+                        >
+                            <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => handleDelete(cat.id)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors"
+                            title="Delete Category"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                );
+            }
+        }
+    ], []);
+
     return (
-        <div className="space-y-6 text-slate-900">
+        <div className="space-y-6 text-slate-900 font-sans">
+            {/* Header Title Bar */}
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                         Food Categories <FolderKanban className="w-5 h-5 text-rose-500" />
                     </h1>
-                    <p className="text-xs text-slate-500 mt-0.5">Manage categories displayed on the customer home screen</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Manage food menu categories powered by TanStack Table</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                    className="px-4.5 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
                 >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Category</span>
                 </button>
             </div>
 
-            {loading ? (
-                <div className="text-center py-12 text-slate-400">Loading categories...</div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {categories.map((cat) => (
-                        <div key={cat.id} className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
-                            <div className="flex items-center gap-3.5">
-                                <div
-                                    className="w-12 h-12 bg-center bg-cover rounded-xl shrink-0 border border-slate-100"
-                                    style={{ backgroundImage: `url("${cat.image_url || cat.image || '/placeholderfood.png'}")` }}
-                                />
-                                <div>
-                                    <h3 className="font-bold text-slate-900 text-sm">{cat.name}</h3>
-                                    <p className="text-xs text-slate-500">{cat.description || 'No description'}</p>
-                                </div>
-                            </div>
+            {/* TanStack Data Table Component */}
+            <DataTable
+                data={categories}
+                columns={columns}
+                loading={loading}
+                searchPlaceholder="Search categories by name or description..."
+                defaultPageSize={5}
+                emptyMessage="No categories found"
+                emptyIcon={FolderKanban}
+            />
 
-                            <div className="flex gap-1.5">
-                                <button onClick={() => handleOpenModal(cat)} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors">
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDelete(cat.id)} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
+            {/* Modal for Add / Edit Category */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-md shadow-2xl text-slate-900">
                         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                             <h2 className="text-lg font-bold text-slate-900">{editingCategory ? 'Edit Category' : 'Add Category'}</h2>
@@ -124,18 +182,15 @@ export default function AdminCategories() {
                                     required
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-medium"
                                 />
                             </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Image URL</label>
-                                <input
-                                    type="url"
-                                    value={imageUrl}
-                                    onChange={(e) => setImageUrl(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500"
-                                />
-                            </div>
+                            <ImageFileInput
+                                value={imageUrl}
+                                onChange={(croppedImg) => setImageUrl(croppedImg)}
+                                label="Upload Category Image (File Upload & Crop)"
+                                aspect={1 / 1}
+                            />
                             <div>
                                 <label className="text-xs font-bold text-slate-700 block mb-1">Description</label>
                                 <textarea

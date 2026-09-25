@@ -5,16 +5,22 @@ import CallButton from '../components/CallButton';
 import FoodCard from '../components/FoodCard';
 import CategoryCard from '../components/CategoryCard';
 import BottomNavigation from '../components/BottomNavigation';
+import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
+import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
 
 export default function Home() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+
+    // Active order modal state
+    const [activeOrder, setActiveOrder] = useState(null);
+    const [showOrderModal, setShowOrderModal] = useState(false);
 
     // Table detection from QR Code URL (?table=X)
     const [tableNumber, setTableNumber] = useState(() => {
@@ -30,6 +36,20 @@ export default function Home() {
     const [homeData, setHomeData] = useState(null);
     const [allDishes, setAllDishes] = useState([]);
     const [apiLoading, setApiLoading] = useState(true);
+
+    useEffect(() => {
+        const storedOrder = localStorage.getItem('orderly_active_order');
+        if (storedOrder) {
+            try {
+                const parsed = JSON.parse(storedOrder);
+                if (parsed && parsed.id) {
+                    setActiveOrder(parsed);
+                }
+            } catch (e) {
+                console.error('Error parsing stored active order:', e);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         const tableFromUrl = searchParams.get('table');
@@ -99,6 +119,15 @@ export default function Home() {
             className="relative flex size-full min-h-screen flex-col bg-white justify-between group/design-root overflow-x-hidden"
             style={{ fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif' }}
         >
+            {/* Customer Order Details Modal */}
+            {showOrderModal && activeOrder && (
+                <CustomerOrderDetailsModal
+                    order={activeOrder}
+                    onClose={() => setShowOrderModal(false)}
+                    onOrderMore={() => setShowOrderModal(false)}
+                />
+            )}
+
             <div>
                 {/* Header with Brand & Table Badge */}
                 <div className="flex items-center bg-white p-4 pb-2 justify-between">
@@ -119,6 +148,34 @@ export default function Home() {
                     </div>
                     <CallButton />
                 </div>
+
+                {/* Active Order Banner for Customer (Yellow/Gold Modal Theme) */}
+                {activeOrder && (
+                    <div className="px-4 pt-2">
+                        <div
+                            onClick={() => setShowOrderModal(true)}
+                            className="bg-gradient-to-r from-[#c89346] via-[#bd873b] to-[#a87431] text-white rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:brightness-105 transition-all shadow-md border border-[#b87d35]"
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-white text-[#8b5e2b] flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                                    <Utensils className="w-4.5 h-4.5 stroke-[2.2]" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-black text-white">Active Table #{activeOrder.table_number} Order</span>
+                                        <span className="text-[10px] uppercase font-extrabold bg-[#1a1815] text-[#f5d796] border border-[#3b3226] px-2 py-0.5 rounded-full">
+                                            {activeOrder.status === 'pending' ? 'Pending' : activeOrder.status === 'preparing' ? 'Preparing' : 'Served'}
+                                        </span>
+                                    </div>
+                                    <span className="text-[11px] text-amber-100 font-semibold block mt-0.5">
+                                        Total: ₹{Number(activeOrder.total_amount).toFixed(2)} · Tap for details & live tracking
+                                    </span>
+                                </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-white shrink-0" />
+                        </div>
+                    </div>
+                )}
 
                 {/* Search Bar */}
                 <div className="px-4 pb-3 pt-2">

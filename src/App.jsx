@@ -26,8 +26,9 @@ function App() {
           <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
           <Route path="/cart" element={<Cart />} />
 
-          {/* Kitchen / Cooker Real-time View */}
+          {/* Kitchen / Cooker / Waiter Real-time Views */}
           <Route path="/kitchen" element={<KitchenView />} />
+          <Route path="/waiter" element={<KitchenView />} />
 
           {/* Admin Management Portal */}
           <Route path="/admin" element={<AdminLayout />}>

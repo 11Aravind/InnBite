@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiService } from '../../utils/apiService';
+import { AdminSkeletonCards } from '../../components/AdminSkeletonTable';
 import { Plus, Printer, Trash2, QrCode, Sparkles } from 'lucide-react';
 
 export default function AdminTables() {
@@ -80,7 +81,7 @@ export default function AdminTables() {
             </div>
 
             {loading ? (
-                <div className="text-center py-12 text-slate-400">Loading tables...</div>
+                <AdminSkeletonCards count={8} />
             ) : tables.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200">No tables registered</div>
             ) : (

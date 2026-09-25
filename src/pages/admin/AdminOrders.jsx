@@ -1,22 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../../utils/apiService';
-import { Receipt, RefreshCw, DollarSign, CreditCard } from 'lucide-react';
+import { playOrderChimeSound } from '../../utils/sound';
+import AdminSkeletonTable from '../../components/AdminSkeletonTable';
+import { Receipt, RefreshCw, DollarSign, CreditCard, Bell, Volume2, VolumeX } from 'lucide-react';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterPayment, setFilterPayment] = useState('all');
+    const [soundEnabled, setSoundEnabled] = useState(true);
+
+    const previousOrderIdsRef = useRef(new Set());
+    const isFirstLoadRef = useRef(true);
 
     const loadOrders = async () => {
         setLoading(true);
         const data = await apiService.getOrders();
-        setOrders(data || []);
+        const freshOrders = data || [];
+
+        const newOrders = freshOrders.filter(o => !previousOrderIdsRef.current.has(o.id));
+        if (!isFirstLoadRef.current && newOrders.length > 0 && soundEnabled) {
+            playOrderChimeSound();
+        }
+
+        freshOrders.forEach(o => previousOrderIdsRef.current.add(o.id));
+        isFirstLoadRef.current = false;
+
+        setOrders(freshOrders);
         setLoading(false);
     };
 
     useEffect(() => {
         loadOrders();
-    }, []);
+        const interval = setInterval(loadOrders, 5000);
+        return () => clearInterval(interval);
+    }, [soundEnabled]);
 
     const handleMarkPaid = async (orderId) => {
         await apiService.updatePaymentStatus(orderId, 'paid');
@@ -43,6 +61,14 @@ export default function AdminOrders() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${soundEnabled ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-700'}`}
+                    >
+                        {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                        <span>{soundEnabled ? 'Sound ON' : 'Muted'}</span>
+                    </button>
+
                     <div className="flex bg-white p-1 rounded-xl border border-slate-200 text-xs">
                         {['all', 'paid', 'pending'].map((p) => (
                             <button
@@ -54,17 +80,19 @@ export default function AdminOrders() {
                             </button>
                         ))}
                     </div>
+
                     <button
                         onClick={loadOrders}
                         className="p-2 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors"
+                        title="Refresh"
                     >
                         <RefreshCw className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="text-center py-12 text-slate-400">Loading orders...</div>
+            {loading && orders.length === 0 ? (
+                <AdminSkeletonTable rows={5} cols={5} />
             ) : filteredOrders.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200">No orders matching filter</div>
             ) : (

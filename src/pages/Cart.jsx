@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from 'react-use-cart';
 import CartItem from '../components/CartItem';
 import { apiService } from '../utils/apiService';
 import { openRazorpayCheckout } from '../utils/razorpay';
+import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
+import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, Printer } from 'lucide-react';
 
 export default function Cart() {
     const navigate = useNavigate();
@@ -34,6 +36,15 @@ export default function Cart() {
         const val = e.target.value;
         setTableNumber(val);
         localStorage.setItem('orderly_table_number', val);
+    };
+
+    const handleSaveOrderState = (orderData) => {
+        setOrderPlaced(orderData);
+        try {
+            localStorage.setItem('orderly_active_order', JSON.stringify(orderData));
+        } catch (e) {
+            console.error('Error saving active order:', e);
+        }
     };
 
     const handlePlaceOrder = async () => {
@@ -72,21 +83,20 @@ export default function Cart() {
                     const res = await apiService.createOrder(finalPayload);
                     setIsSubmitting(false);
                     if (res.success) {
-                        setOrderPlaced(res.order);
+                        handleSaveOrderState(res.order);
                         emptyCart();
                     }
                 },
                 onFailure: async (err) => {
                     setIsSubmitting(false);
-                    const is401 = err?.message?.includes('401') || err?.message?.includes('key') || err?.message?.includes('Unauthorized') || err?.message?.includes('cancelled');
                     if (err?.message?.includes('cancelled')) {
                         return; // User intentionally closed popup
                     }
-                    
+
                     const confirmDemo = window.confirm(
                         `Razorpay Online Payment could not be processed (${err.message || '401 Unauthorized'}).\n\nWould you like to complete this order using Demo/Test Payment?`
                     );
-                    
+
                     if (confirmDemo) {
                         setIsSubmitting(true);
                         const demoPayload = {
@@ -97,7 +107,7 @@ export default function Cart() {
                         const res = await apiService.createOrder(demoPayload);
                         setIsSubmitting(false);
                         if (res.success) {
-                            setOrderPlaced(res.order);
+                            handleSaveOrderState(res.order);
                             emptyCart();
                         }
                     }
@@ -111,43 +121,12 @@ export default function Cart() {
 
     if (orderPlaced) {
         return (
-            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6 text-emerald-600">
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h1>
-                <p className="text-gray-500 mb-6">Your order has been sent directly to the kitchen.</p>
-
-                <div className="w-full max-w-sm bg-gray-50 rounded-2xl p-5 mb-8 text-left border border-gray-100">
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
-                        <span className="text-sm text-gray-500">Table Number</span>
-                        <span className="text-lg font-bold text-gray-900">Table #{orderPlaced.table_number}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
-                        <span className="text-sm text-gray-500">Order ID</span>
-                        <span className="text-xs font-mono text-gray-700">{orderPlaced.id}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
-                        <span className="text-sm text-gray-500">Payment Option</span>
-                        <span className="text-sm font-semibold capitalize text-gray-800">
-                            Paid Online 💳
-                        </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1">
-                        <span className="text-sm font-bold text-gray-900">Total Amount</span>
-                        <span className="text-xl font-bold text-emerald-600">₹{Number(orderPlaced.total_amount).toFixed(2)}</span>
-                    </div>
-                </div>
-
-                <button
-                    onClick={() => navigate('/')}
-                    className="w-full max-w-sm h-12 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-colors"
-                >
-                    Back to Home
-                </button>
+            <div className="min-h-screen bg-[#f8fafc] py-8 px-4 font-sans flex items-center justify-center">
+                <CustomerOrderDetailsModal
+                    order={orderPlaced}
+                    onClose={() => navigate('/')}
+                    onOrderMore={() => navigate('/')}
+                />
             </div>
         );
     }
@@ -243,8 +222,6 @@ export default function Cart() {
                                 />
                             </div>
                         </div>
-
-
 
                         {/* Order Summary */}
                         <div className="bg-white px-4 py-4 border-t border-[#f4f1f1] mb-24">

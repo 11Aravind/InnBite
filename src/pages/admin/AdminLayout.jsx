@@ -37,9 +37,10 @@ export default function AdminLayout() {
                     {/* Brand Header */}
                     <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-3.5">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-xl shadow-md">
+                            {/* <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-xl shadow-md">
                                 O
-                            </div>
+                            </div> */}
+                            <img src='public/logo.svg' alt='logo' />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-1.5">
                                     Orderly <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-md border border-slate-200">Admin</span>
@@ -60,8 +61,8 @@ export default function AdminLayout() {
                                     key={item.path}
                                     to={item.path}
                                     className={`relative group flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${active
-                                            ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold'
-                                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                        ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold'
+                                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                         }`}
                                 >
                                     <IconComponent className={`w-5 h-5 transition-transform group-hover:scale-110 ${active ? 'text-white' : 'text-slate-500 group-hover:text-slate-900'}`} />

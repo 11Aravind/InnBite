@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../utils/apiService';
+import AdminSkeletonTable from '../../components/AdminSkeletonTable';
 import {
     DollarSign,
     ShoppingBag,
@@ -124,7 +125,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-8 text-slate-400">Loading order data...</div>
+                    <AdminSkeletonTable rows={4} cols={6} />
                 ) : orders.length === 0 ? (
                     <div className="text-center py-10 text-slate-400">No orders placed yet</div>
                 ) : (
