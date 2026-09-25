@@ -104,7 +104,7 @@ export default function AdminOrders() {
 
                                         <div className="text-right pl-3 border-l border-slate-100">
                                             <span className="text-[11px] text-slate-400 block font-medium">Total Amount</span>
-                                            <span className="text-base font-black text-emerald-600">${Number(order.total_amount).toFixed(2)}</span>
+                                            <span className="text-base font-black text-emerald-600">₹{Number(order.total_amount).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -118,7 +118,7 @@ export default function AdminOrders() {
                                                 <span className="font-medium text-slate-800">{item.dish_name || item.name}</span>
                                                 {item.portion_label && <span className="text-[10px] text-amber-600 block font-normal">Portion: {item.portion_label}</span>}
                                             </div>
-                                            <span className="font-mono text-slate-700 font-bold">${(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
+                                            <span className="font-mono text-slate-700 font-bold">₹{(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>

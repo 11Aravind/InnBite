@@ -45,11 +45,11 @@ export default function AdminDashboard() {
                     <p className="text-xs text-slate-500 mt-0.5">Live analytics and metrics for Orderly QR System</p>
                 </div>
                 <button
-                    onClick={() => navigate('/kitchen')}
-                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                    onClick={() => navigate('/admin/orders')}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
                 >
-                    <Flame className="w-4 h-4" />
-                    <span>Open Live Kitchen Display</span>
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>View Orders & Payments</span>
                 </button>
             </div>
 
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
                             <DollarSign className="w-5 h-5" />
                         </div>
                     </div>
-                    <div className="text-2xl font-black text-slate-900">${totalRevenue.toFixed(2)}</div>
+                    <div className="text-2xl font-black text-slate-900">₹{totalRevenue.toFixed(2)}</div>
                     <span className="text-[11px] text-emerald-600 font-medium mt-1.5 block">
                         Accumulated earnings
                     </span>

@@ -8,6 +8,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
+import ImageWithSkeleton from '../components/ImageWithSkeleton';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -175,25 +176,25 @@ export default function Home() {
                             <div className="flex items-stretch p-4 gap-3 snap-x snap-mandatory">
                                 {apiLoading ? (
                                     Array(2).fill(0).map((_, idx) => (
-                                        <div key={idx} className="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-[280px] sm:min-w-60 snap-start">
-                                            <Skeleton height={120} borderRadius={12} />
-                                            <Skeleton width={120} height={20} />
+                                        <div key={idx} className="flex h-full flex-1 flex-col gap-2 rounded-2xl min-w-[280px] sm:min-w-60 snap-start">
+                                            <Skeleton height={140} borderRadius={16} />
+                                            <Skeleton width={140} height={18} />
                                         </div>
                                     ))
                                 ) : (
                                     banners.map((banner) => (
                                         <div
                                             key={banner.id}
-                                            className="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-[280px] sm:min-w-60 snap-start cursor-pointer"
+                                            className="flex h-full flex-1 flex-col gap-2 rounded-2xl min-w-[280px] sm:min-w-[320px] snap-start cursor-pointer group"
                                             onClick={() => banner.dish_id && navigate(`/FoodDetails/${banner.dish_id}`)}
                                         >
-                                            <div
-                                                className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col shadow-sm"
-                                                style={{
-                                                    backgroundImage: `url("${banner.image_url}")`
-                                                }}
-                                            ></div>
-                                            <p className="text-[#171212] text-base font-medium leading-normal">
+                                            <ImageWithSkeleton
+                                                src={banner.image_url}
+                                                alt={banner.title}
+                                                aspectRatio="aspect-video"
+                                                className="w-full rounded-2xl shadow-sm border border-slate-100 group-hover:shadow-md transition-shadow"
+                                            />
+                                            <p className="text-slate-900 text-sm font-bold leading-tight px-1">
                                                 {banner.title}
                                             </p>
                                         </div>

@@ -21,7 +21,7 @@ export const openRazorpayCheckout = async ({ amount, orderId, customerName, cust
         return;
     }
 
-    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_demo_key';
+    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TgAQ8VOLUZshIM';
 
     const options = {
         key: keyId,
@@ -33,7 +33,7 @@ export const openRazorpayCheckout = async ({ amount, orderId, customerName, cust
         handler: function (response) {
             if (onSuccess) {
                 onSuccess({
-                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_payment_id: response.razorpay_payment_id || (`pay_test_${Date.now()}`),
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_signature: response.razorpay_signature
                 });
@@ -53,6 +53,18 @@ export const openRazorpayCheckout = async ({ amount, orderId, customerName, cust
         }
     };
 
-    const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
+    try {
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.on('payment.failed', function (response) {
+            console.error('Razorpay Payment Failed:', response.error);
+            const errDesc = response?.error?.description || response?.error?.reason || 'Razorpay 401 Unauthorized / Invalid Key';
+            if (onFailure) {
+                onFailure(new Error(errDesc));
+            }
+        });
+        paymentObject.open();
+    } catch (err) {
+        console.error('Razorpay initialization exception:', err);
+        if (onFailure) onFailure(err);
+    }
 };

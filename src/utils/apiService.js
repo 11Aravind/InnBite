@@ -26,8 +26,8 @@ const setLocalStore = (key, data) => {
     }
 };
 
-// Helper: Fast timeout promise wrapper (1.5 seconds max) to prevent network lag
-const fetchWithTimeout = (promise, ms = 1500) => {
+// Helper: Fast timeout promise wrapper (600ms max) for instant local failover
+const fetchWithTimeout = (promise, ms = 600) => {
     let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
@@ -70,8 +70,7 @@ export const apiService = {
                         supabase.from('banners').select('*'),
                         supabase.from('dishes').select('*').eq('is_available', true),
                         supabase.from('categories').select('*').order('display_order', { ascending: true })
-                    ]),
-                    1500
+                    ])
                 );
 
                 if (!bannersRes.error && !dishesRes.error && !categoriesRes.error) {
@@ -114,8 +113,7 @@ export const apiService = {
         if (isSupabaseConfigured) {
             try {
                 const { data, error } = await fetchWithTimeout(
-                    supabase.from('categories').select('*').order('display_order', { ascending: true }),
-                    1500
+                    supabase.from('categories').select('*').order('display_order', { ascending: true })
                 );
                 if (!error && data && data.length > 0) {
                     setLocalStore(MOCK_CATEGORIES_KEY, data);
@@ -133,7 +131,7 @@ export const apiService = {
             try {
                 let query = supabase.from('dishes').select('*');
                 if (categoryId) query = query.eq('category_id', categoryId);
-                const { data, error } = await fetchWithTimeout(query, 1500);
+                const { data, error } = await fetchWithTimeout(query);
                 if (!error && data && data.length > 0) {
                     if (!categoryId) setLocalStore(MOCK_DISHES_KEY, data);
                     return data;
@@ -154,8 +152,7 @@ export const apiService = {
         if (isSupabaseConfigured) {
             try {
                 const { data, error } = await fetchWithTimeout(
-                    supabase.from('dishes').select('*').eq('id', id).maybeSingle(),
-                    1500
+                    supabase.from('dishes').select('*').eq('id', id).maybeSingle()
                 );
                 if (!error && data) return data;
             } catch (err) {

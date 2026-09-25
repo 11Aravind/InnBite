@@ -4,6 +4,7 @@ import QuantityControl from '../components/QuantityControl';
 import { useCart } from 'react-use-cart';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
+import ImageWithSkeleton from '../components/ImageWithSkeleton';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -116,10 +117,12 @@ const FoodDetails = () => {
                         <div className="flex w-full">
                             {images.map((img, idx) => (
                                 <div key={idx} className="flex-none w-full snap-center p-4">
-                                    <div
-                                        className="w-full bg-center bg-no-repeat aspect-square max-h-72 bg-cover rounded-2xl shadow-md"
-                                        style={{ backgroundImage: `url("${img}")` }}
-                                    ></div>
+                                    <ImageWithSkeleton
+                                        src={img}
+                                        alt={foodData.name}
+                                        aspectRatio="aspect-square"
+                                        className="w-full max-h-72 rounded-2xl shadow-md border border-slate-100"
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -129,7 +132,7 @@ const FoodDetails = () => {
                         {foodData.name}
                     </h1>
                     <p className="text-[#e74c3c] text-xl font-bold leading-normal pb-3 px-4">
-                        ${price}
+                        ₹{price}
                     </p>
                     <p className="text-[#555] text-base font-normal leading-relaxed pb-3 px-4">
                         {foodData.description}
@@ -223,7 +226,7 @@ const FoodDetails = () => {
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
                             <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
                         </svg>
-                        <span>Add to Cart · ${(price * quantity).toFixed(2)}</span>
+                        <span>Add to Cart · ₹{(price * quantity).toFixed(2)}</span>
                     </button>
                 </div>
             </div>

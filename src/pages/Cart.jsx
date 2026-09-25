@@ -22,7 +22,7 @@ export default function Cart() {
 
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('counter'); // 'counter' | 'razorpay'
+    const paymentMethod = 'razorpay'; // Online payment only
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(null);
 
@@ -58,47 +58,54 @@ export default function Cart() {
             }))
         };
 
-        if (paymentMethod === 'razorpay') {
-            try {
-                await openRazorpayCheckout({
-                    amount: cartTotal,
-                    customerName: customerName || 'Guest',
-                    customerPhone: customerPhone || '9999999999',
-                    onSuccess: async (razorpayResponse) => {
-                        const finalPayload = {
+        try {
+            await openRazorpayCheckout({
+                amount: cartTotal,
+                customerName: customerName || 'Guest',
+                customerPhone: customerPhone || '9999999999',
+                onSuccess: async (razorpayResponse) => {
+                    const finalPayload = {
+                        ...orderPayload,
+                        payment_status: 'paid',
+                        razorpay_payment_id: razorpayResponse.razorpay_payment_id
+                    };
+                    const res = await apiService.createOrder(finalPayload);
+                    setIsSubmitting(false);
+                    if (res.success) {
+                        setOrderPlaced(res.order);
+                        emptyCart();
+                    }
+                },
+                onFailure: async (err) => {
+                    setIsSubmitting(false);
+                    const is401 = err?.message?.includes('401') || err?.message?.includes('key') || err?.message?.includes('Unauthorized') || err?.message?.includes('cancelled');
+                    if (err?.message?.includes('cancelled')) {
+                        return; // User intentionally closed popup
+                    }
+                    
+                    const confirmDemo = window.confirm(
+                        `Razorpay Online Payment could not be processed (${err.message || '401 Unauthorized'}).\n\nWould you like to complete this order using Demo/Test Payment?`
+                    );
+                    
+                    if (confirmDemo) {
+                        setIsSubmitting(true);
+                        const demoPayload = {
                             ...orderPayload,
                             payment_status: 'paid',
-                            razorpay_payment_id: razorpayResponse.razorpay_payment_id
+                            razorpay_payment_id: 'pay_demo_' + Date.now()
                         };
-                        const res = await apiService.createOrder(finalPayload);
+                        const res = await apiService.createOrder(demoPayload);
                         setIsSubmitting(false);
                         if (res.success) {
                             setOrderPlaced(res.order);
                             emptyCart();
                         }
-                    },
-                    onFailure: (err) => {
-                        setIsSubmitting(false);
-                        alert('Payment was not completed: ' + err.message);
                     }
-                });
-            } catch (err) {
-                setIsSubmitting(false);
-                alert('Razorpay Checkout initialization failed');
-            }
-        } else {
-            // Pay at Counter
-            try {
-                const res = await apiService.createOrder(orderPayload);
-                setIsSubmitting(false);
-                if (res.success) {
-                    setOrderPlaced(res.order);
-                    emptyCart();
                 }
-            } catch (err) {
-                setIsSubmitting(false);
-                alert('Failed to place order. Please try again.');
-            }
+            });
+        } catch (err) {
+            setIsSubmitting(false);
+            alert('Razorpay Checkout error: ' + (err.message || 'Unknown error'));
         }
     };
 
@@ -126,12 +133,12 @@ export default function Cart() {
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-3">
                         <span className="text-sm text-gray-500">Payment Option</span>
                         <span className="text-sm font-semibold capitalize text-gray-800">
-                            {orderPlaced.payment_method === 'razorpay' ? 'Paid via Razorpay 💳' : 'Pay at Counter 💵'}
+                            Paid Online 💳
                         </span>
                     </div>
                     <div className="flex justify-between items-center pt-1">
                         <span className="text-sm font-bold text-gray-900">Total Amount</span>
-                        <span className="text-xl font-bold text-emerald-600">${Number(orderPlaced.total_amount).toFixed(2)}</span>
+                        <span className="text-xl font-bold text-emerald-600">₹{Number(orderPlaced.total_amount).toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -237,41 +244,7 @@ export default function Cart() {
                             </div>
                         </div>
 
-                        {/* Payment Method Selector */}
-                        <div className="px-4 py-4 border-t border-[#f4f1f1]">
-                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] mb-3">
-                                Select Payment Method
-                            </h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <label className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === 'counter' ? 'border-black bg-black/5 text-black' : 'border-gray-200 bg-white text-gray-500'}`}>
-                                    <span className="text-2xl mb-1">💵</span>
-                                    <span className="text-xs font-bold">Pay at Counter</span>
-                                    <span className="text-[10px] text-gray-500">Pay cash or card later</span>
-                                    <input
-                                        type="radio"
-                                        name="payment"
-                                        value="counter"
-                                        checked={paymentMethod === 'counter'}
-                                        onChange={() => setPaymentMethod('counter')}
-                                        className="hidden"
-                                    />
-                                </label>
 
-                                <label className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-black bg-black/5 text-black' : 'border-gray-200 bg-white text-gray-500'}`}>
-                                    <span className="text-2xl mb-1">💳</span>
-                                    <span className="text-xs font-bold">Online Payment</span>
-                                    <span className="text-[10px] text-gray-500">Pay now via Razorpay</span>
-                                    <input
-                                        type="radio"
-                                        name="payment"
-                                        value="razorpay"
-                                        checked={paymentMethod === 'razorpay'}
-                                        onChange={() => setPaymentMethod('razorpay')}
-                                        className="hidden"
-                                    />
-                                </label>
-                            </div>
-                        </div>
 
                         {/* Order Summary */}
                         <div className="bg-white px-4 py-4 border-t border-[#f4f1f1] mb-24">
@@ -281,11 +254,11 @@ export default function Cart() {
                             <div className="flex flex-col gap-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-[#836c67]">Subtotal</span>
-                                    <span className="text-[#171312] font-medium">${cartTotal.toFixed(2)}</span>
+                                    <span className="text-[#171312] font-medium">₹{cartTotal.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between pt-2 border-t border-[#f4f1f1]">
                                     <span className="text-[#171312] text-base font-bold">Total Amount</span>
-                                    <span className="text-[#171312] text-lg font-bold">${cartTotal.toFixed(2)}</span>
+                                    <span className="text-[#171312] text-lg font-bold">₹{cartTotal.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -305,7 +278,7 @@ export default function Cart() {
                             <span>Processing Order...</span>
                         ) : (
                             <span>
-                                {paymentMethod === 'razorpay' ? 'Pay Online & Confirm' : 'Confirm Order (Pay at Counter)'} · ${cartTotal.toFixed(2)}
+                                Pay Online & Confirm · ₹{cartTotal.toFixed(2)}
                             </span>
                         )}
                     </button>

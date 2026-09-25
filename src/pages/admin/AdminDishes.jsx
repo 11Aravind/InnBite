@@ -168,7 +168,7 @@ export default function AdminDishes() {
                                     </div>
                                     <h3 className="font-bold text-slate-900 text-base">{dish.name}</h3>
                                     <p className="text-xs text-slate-500 line-clamp-2 my-1.5 leading-relaxed">{dish.description}</p>
-                                    <div className="text-sm font-black text-emerald-600 mt-2">${price}</div>
+                                    <div className="text-sm font-black text-emerald-600 mt-2">₹{price}</div>
                                 </div>
 
                                 <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
@@ -225,7 +225,7 @@ export default function AdminDishes() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">Base Price ($) *</label>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">Base Price (₹) *</label>
                                     <input
                                         type="number"
                                         step="0.01"

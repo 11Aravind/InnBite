@@ -17,7 +17,6 @@ export default function AdminLayout() {
 
     const navItems = [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { path: '/kitchen', label: 'Kitchen View', icon: Flame },
         { path: '/admin/dishes', label: 'Dishes / Menu', icon: Utensils },
         { path: '/admin/categories', label: 'Categories', icon: FolderKanban },
         { path: '/admin/banners', label: 'Banners & Promos', icon: ImageIcon },
