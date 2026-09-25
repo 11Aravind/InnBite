@@ -145,7 +145,7 @@ export default function AdminCategories() {
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-4.5 py-2.5 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 flex items-center gap-2"
+                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Category</span>

@@ -233,6 +233,7 @@ export const apiService = {
     },
 
     async getOrders() {
+        const localOrders = getLocalStore(MOCK_ORDERS_KEY, []);
         if (isSupabaseConfigured) {
             try {
                 const { data, error } = await fetchWithTimeout(
@@ -240,14 +241,29 @@ export const apiService = {
                     1500
                 );
                 if (!error && data) {
-                    setLocalStore(MOCK_ORDERS_KEY, data);
-                    return data;
+                    const localMap = new Map(localOrders.map(o => [o.id, o]));
+                    const mergedRemote = data.map(remote => {
+                        const loc = localMap.get(remote.id);
+                        if (loc) {
+                            return {
+                                ...remote,
+                                status: loc.status || remote.status,
+                                payment_status: loc.payment_status || remote.payment_status
+                            };
+                        }
+                        return remote;
+                    });
+                    const remoteIds = new Set(data.map(d => d.id));
+                    const localOnly = localOrders.filter(o => !remoteIds.has(o.id));
+                    const combined = [...localOnly, ...mergedRemote];
+                    setLocalStore(MOCK_ORDERS_KEY, combined);
+                    return combined;
                 }
             } catch (err) {
                 console.warn('Supabase fetch orders timeout:', err);
             }
         }
-        return getLocalStore(MOCK_ORDERS_KEY, []);
+        return localOrders;
     },
 
     async updateOrderStatus(orderId, status) {

@@ -139,7 +139,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-col items-center flex-1">
                         <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
-                            Orderly
+                            InnBite
                         </h2>
                         <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

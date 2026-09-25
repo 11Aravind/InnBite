@@ -43,7 +43,7 @@ export default function AdminDashboard() {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                         Dashboard Overview <TrendingUp className="w-5 h-5 text-rose-500" />
                     </h1>
-                    <p className="text-xs text-slate-500 mt-0.5">Live analytics and metrics for Orderly QR System</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Live analytics and metrics for InnBite QR System</p>
                 </div>
                 <button
                     onClick={() => navigate('/admin/orders')}

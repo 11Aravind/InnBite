@@ -27,7 +27,7 @@ export const openRazorpayCheckout = async ({ amount, orderId, customerName, cust
         key: keyId,
         amount: Math.round(amount * 100), // Amount in paise
         currency: 'INR',
-        name: 'Orderly Restaurant',
+        name: 'InnBite Restaurant',
         description: `Order Payment for Table #${orderId || 'Order'}`,
         image: '/logo.svg',
         handler: function (response) {

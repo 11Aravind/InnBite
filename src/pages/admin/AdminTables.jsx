@@ -96,7 +96,7 @@ export default function AdminTables() {
                             >
                                 <div className="w-full pb-3 border-b border-slate-100 mb-3 flex items-center justify-between">
                                     <span className="text-xs font-black text-rose-500 tracking-wider uppercase flex items-center gap-1">
-                                        <Sparkles className="w-3 h-3" /> Orderly Table
+                                        <Sparkles className="w-3 h-3" /> InnBite Table
                                     </span>
                                     <button
                                         onClick={() => handleDeleteTable(tbl.id)}

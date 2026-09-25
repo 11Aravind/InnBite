@@ -108,7 +108,7 @@ const FoodDetails = () => {
                             </svg>
                         </div>
                         <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
-                            ORDERLY
+                            INNBITE
                         </h2>
                     </div>
 

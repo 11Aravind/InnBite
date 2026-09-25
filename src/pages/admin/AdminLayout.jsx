@@ -40,10 +40,10 @@ export default function AdminLayout() {
                             {/* <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center font-black text-white text-xl shadow-md">
                                 O
                             </div> */}
-                            <img src='public/logo.svg' alt='logo' />
+                            <img src="/logo.svg" alt="InnBite Logo" className="w-9 h-9 shrink-0 object-contain" />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-1.5">
-                                    Orderly <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-md border border-slate-200">Admin</span>
+                                    InnBite <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-md border border-slate-200">Admin</span>
                                 </h1>
                                 <span className="text-[11px] text-slate-500 font-medium">Management Portal</span>
                             </div>
