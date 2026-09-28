@@ -305,6 +305,7 @@ export const apiService = {
             images: Array.isArray(dishPayload.images) ? dishPayload.images : [dishPayload.imageUrl].filter(Boolean),
             portions: dishPayload.portions || [],
             ingredients: dishPayload.ingredients || [],
+            ingredients_list: dishPayload.ingredients_list || [],
             allergens: dishPayload.allergens || [],
             taste_profile: dishPayload.tasteProfile || dishPayload.taste_profile || [],
             is_popular: Boolean(dishPayload.is_popular || dishPayload.isPopular),

@@ -239,8 +239,9 @@ export default function AdminBanners() {
                             <ImageFileInput
                                 value={imageUrl}
                                 onChange={(croppedImg) => setImageUrl(croppedImg)}
-                                label="Upload Banner Image (File Upload & Crop) *"
+                                label="Upload Banner Image (File Upload & Crop)"
                                 aspect={16 / 9}
+                                required={true}
                             />
                             <div>
                                 <label className="text-xs font-bold text-slate-700 block mb-1">Link URL (Optional)</label>

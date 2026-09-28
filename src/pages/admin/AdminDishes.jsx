@@ -131,9 +131,10 @@ export default function AdminDishes() {
                 preparation: dish.preparation || dish.preparation_details || '',
                 basePrice: dish.basePrice || dish.base_price || '',
                 category: dish.category || dish.category_id || '',
-                imageUrl: (dish.images && dish.images[0]) || dish.image || '',
+                images: (dish.images && Array.isArray(dish.images)) ? dish.images.slice(0, 3) : (dish.image || dish.image_url ? [dish.image || dish.image_url] : []),
                 ingredients: parsedIngredients,
                 allergens: Array.isArray(dish.allergens) ? dish.allergens.join(', ') : '',
+                ingredientsList: Array.isArray(dish.ingredients_list) ? dish.ingredients_list.join(', ') : '',
                 tasteProfile: Array.isArray(dish.tasteProfile || dish.taste_profile) ? (dish.tasteProfile || dish.taste_profile).join(', ') : '',
                 isPopular: Boolean(dish.is_popular || dish.isPopular),
                 isSpecial: Boolean(dish.is_special || dish.isSpecial),
@@ -150,7 +151,7 @@ export default function AdminDishes() {
                 preparation: '',
                 basePrice: '',
                 category: '',
-                imageUrl: '',
+                images: [],
                 ingredients: [],
                 allergens: '',
                 tasteProfile: '',
@@ -159,7 +160,8 @@ export default function AdminDishes() {
                 isAvailable: true,
                 portions: [
                     { value: "regular", label: "Regular", price: 0 }
-                ]
+                ],
+                ingredientsList: ''
             });
         }
         setIsModalOpen(true);
@@ -178,8 +180,8 @@ export default function AdminDishes() {
     const handleSaveDish = async (e) => {
         e.preventDefault();
         
-        if (!formData.imageUrl) {
-            toast.error('Please upload a dish image');
+        if (!formData.images || formData.images.length === 0) {
+            toast.error('Please upload at least one dish image');
             return;
         }
 
@@ -192,7 +194,7 @@ export default function AdminDishes() {
             base_price: Number(formData.basePrice),
             category: formData.category,
             category_id: formData.category,
-            images: [formData.imageUrl || '/placeholderfood.png'],
+            images: formData.images,
             portions: (formData.portions && formData.portions.length > 0) ? formData.portions : [
                 { value: "regular", label: "Regular", price: Number(formData.basePrice) }
             ],
@@ -204,6 +206,9 @@ export default function AdminDishes() {
             allergens: typeof formData.allergens === 'string'
                 ? formData.allergens.split(',').map(s => s.trim()).filter(Boolean)
                 : formData.allergens,
+            ingredients_list: typeof formData.ingredientsList === 'string'
+                ? formData.ingredientsList.split(',').map(s => s.trim()).filter(Boolean)
+                : formData.ingredientsList,
             tasteProfile: typeof formData.tasteProfile === 'string'
                 ? formData.tasteProfile.split(',').map(s => s.trim()).filter(Boolean)
                 : formData.tasteProfile,
@@ -694,13 +699,44 @@ export default function AdminDishes() {
                                 </div>
                             </div>
 
-                            <ImageFileInput
-                                value={formData.imageUrl}
-                                onChange={(croppedImg) => setFormData({ ...formData, imageUrl: croppedImg })}
-                                label="Upload Dish Image (File Upload & Crop)"
-                                aspect={4 / 3}
-                                required={true}
-                            />
+                            <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                                <label className="text-xs font-bold text-slate-800 block">Dish Images (Max 3)</label>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {[0, 1, 2].map((idx) => {
+                                        // Only show the next input if previous is filled
+                                        if (idx > 0 && (!formData.images || idx > formData.images.length)) return null;
+                                        
+                                        return (
+                                            <div key={idx} className="relative">
+                                                <ImageFileInput
+                                                    value={formData.images?.[idx] || ''}
+                                                    onChange={(croppedImg) => {
+                                                        const newImages = [...(formData.images || [])];
+                                                        newImages[idx] = croppedImg;
+                                                        setFormData({ ...formData, images: newImages });
+                                                    }}
+                                                    label={idx === 0 ? "Primary Image (Required)" : `Additional Image ${idx + 1}`}
+                                                    aspect={4 / 3}
+                                                    required={idx === 0}
+                                                />
+                                                {idx > 0 && formData.images?.[idx] && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newImages = formData.images.filter((_, i) => i !== idx);
+                                                            setFormData({ ...formData, images: newImages });
+                                                        }}
+                                                        className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-md hover:bg-rose-600 transition-colors z-10"
+                                                        title="Remove Image"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
                             <div>
                                 <label className="text-xs font-bold text-slate-700 block mb-1">Description</label>
@@ -719,6 +755,17 @@ export default function AdminDishes() {
                                     placeholder="e.g. Hand-tossed pizza dough topped with San Marzano tomatoes, fresh mozzarella..."
                                     value={formData.preparation}
                                     onChange={(e) => setFormData({ ...formData, preparation: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 block mb-1">Ingredients (comma-separated for display only)</label>
+                                <textarea
+                                    rows="2"
+                                    placeholder="e.g. Pasta, Carrots, Zucchini, Bell Peppers, Cream..."
+                                    value={formData.ingredientsList || ''}
+                                    onChange={(e) => setFormData({ ...formData, ingredientsList: e.target.value })}
                                     className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
                                 />
                             </div>
