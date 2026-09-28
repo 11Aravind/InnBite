@@ -11,6 +11,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
+import { APP_CONFIG } from '../config';
 import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
 
 export default function Home() {
@@ -183,7 +184,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-col items-center flex-1">
                         <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
-                            InnBite
+                            {APP_CONFIG.APP_NAME}
                         </h2>
                         <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -192,6 +193,19 @@ export default function Home() {
                     </div>
                     <CallButton />
                 </div>
+
+                {/* Shop Closed Banner */}
+                {homeData?.settings?.is_closed && (
+                    <div className="bg-rose-50 border-b border-rose-200 px-4 py-3 flex items-start gap-3 sticky top-0 z-10 shadow-sm">
+                        <div className="mt-0.5 bg-rose-100 text-rose-600 rounded-full p-1 shrink-0">
+                            <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <p className="text-[#171212] text-sm font-bold leading-tight">We are currently closed</p>
+                            <p className="text-rose-600 text-xs font-semibold mt-0.5">Online ordering is temporarily paused because the shop is closed.</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Active Order Banner for Customer (Yellow/Gold Modal Theme) */}
                 {activeOrder && (

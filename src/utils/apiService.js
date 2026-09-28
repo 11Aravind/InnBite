@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { APP_CONFIG } from '../config';
 
 const envServiceMode = import.meta.env.VITE_SERVICE_MODE || 'TABLE_SERVICE';
 
@@ -12,9 +13,9 @@ export const apiService = {
         const { data, error } = await supabase.from('restaurant_settings').select('*').eq('restaurant_id', 'R001').maybeSingle();
         if (error) {
             console.error('Supabase settings fetch error:', error);
-            return { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: 'InnBite Restaurant' };
+            return { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant` };
         }
-        return data ? { ...data, service_mode: envServiceMode } : { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: 'InnBite Restaurant' };
+        return data ? { ...data, service_mode: envServiceMode } : { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant` };
     },
 
     async updateRestaurantSettings(newSettings) {
@@ -118,10 +119,11 @@ export const apiService = {
     // READ MENU DATA
     // ----------------------------------------------------
     async getHomePageData() {
-        const [bannersRes, dishesRes, categoriesRes] = await Promise.all([
+        const [bannersRes, dishesRes, categoriesRes, settings] = await Promise.all([
             supabase.from('banners').select('*'),
             supabase.from('dishes').select('*').eq('is_available', true),
-            supabase.from('categories').select('*').order('display_order', { ascending: true })
+            supabase.from('categories').select('*').order('display_order', { ascending: true }),
+            this.getRestaurantSettings()
         ]);
         
         const banners = bannersRes.data || [];
@@ -132,7 +134,8 @@ export const apiService = {
             banners,
             popular_dishes: allDishes.filter(d => (d.is_popular || d.isPopular) && d.is_available !== false),
             todays_specials: allDishes.filter(d => (d.is_special || d.isSpecial) && d.is_available !== false),
-            categories
+            categories,
+            settings
         };
     },
 

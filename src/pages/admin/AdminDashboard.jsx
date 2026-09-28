@@ -16,6 +16,7 @@ import {
     Sliders
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
+import { APP_CONFIG } from '../../config';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -75,15 +76,35 @@ export default function AdminDashboard() {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                         Admin Dashboard <TrendingUp className="w-5 h-5 text-themePrimary" />
                     </h1>
-                    <p className="text-xs text-slate-500 mt-0.5">Live metrics and operational control for InnBite Platform</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Live metrics and operational control for {APP_CONFIG.APP_NAME} Platform</p>
                 </div>
-                <button
-                    onClick={() => navigate('/admin/orders')}
-                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
-                >
-                    <ShoppingBag className="w-4 h-4 text-emerald-200" />
-                    <span>View Orders & Payments</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={async () => {
+                            const newStatus = !settings?.is_closed;
+                            await apiService.updateRestaurantSettings({ 
+                                ...settings, 
+                                is_closed: newStatus 
+                            });
+                            setSettings({ ...settings, is_closed: newStatus });
+                        }}
+                        className={`px-4 py-3 rounded-xl text-xs font-bold shrink-0 cursor-pointer flex items-center gap-2 transition-colors ${
+                            settings?.is_closed 
+                                ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' 
+                                : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        }`}
+                    >
+                        <Sliders className="w-4 h-4" />
+                        <span>{settings?.is_closed ? 'Shop is CLOSED (Click to Open)' : 'Shop is OPEN (Click to Close)'}</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/admin/orders')}
+                        className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer flex items-center gap-2"
+                    >
+                        <ShoppingBag className="w-4 h-4 text-emerald-200" />
+                        <span>View Orders & Payments</span>
+                    </button>
+                </div>
             </div>
 
 
