@@ -33,25 +33,25 @@ export default function AdminDishes() {
     // Portion Chip Card Form State
     const [selectedPresetPortion, setSelectedPresetPortion] = useState('Regular');
     const [customPortionLabel, setCustomPortionLabel] = useState('');
-    const [portionMultiplier, setPortionMultiplier] = useState('1.0');
+    const [portionPrice, setPortionPrice] = useState('');
     const [editingPortionIdx, setEditingPortionIdx] = useState(null);
     const [editPortionLabel, setEditPortionLabel] = useState('');
-    const [editPortionMultiplier, setEditPortionMultiplier] = useState('1.0');
+    const [editPortionPrice, setEditPortionPrice] = useState('');
 
     const handleStartEditPortion = (idx, portion) => {
         setEditingPortionIdx(idx);
         setEditPortionLabel(portion.label);
-        setEditPortionMultiplier(String(portion.multiplier));
+        setEditPortionPrice(String(portion.price || (Number(formData.basePrice) * (portion.multiplier || 1)).toFixed(2) || '0'));
     };
 
     const handleSaveEditPortion = (idx) => {
         if (!editPortionLabel.trim()) return;
-        const mult = Number(editPortionMultiplier) || 1;
+        const price = Number(editPortionPrice) || 0;
         const updatedPortions = [...formData.portions];
         updatedPortions[idx] = {
             value: editPortionLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, '-'),
             label: editPortionLabel.trim(),
-            multiplier: mult
+            price: price
         };
         setFormData({ ...formData, portions: updatedPortions });
         setEditingPortionIdx(null);
@@ -74,7 +74,7 @@ export default function AdminDishes() {
         isSpecial: false,
         isAvailable: true,
         portions: [
-            { value: "regular", label: "Regular", multiplier: 1 }
+            { value: "regular", label: "Regular", price: 0 }
         ]
     });
 
@@ -113,7 +113,7 @@ export default function AdminDishes() {
     const handleOpenModal = (dish = null) => {
         setSelectedPresetPortion('Regular');
         setCustomPortionLabel('');
-        setPortionMultiplier('1.0');
+        setPortionPrice('');
         setNewCustomizationItem('');
         setEditingPortionIdx(null);
 
@@ -139,7 +139,7 @@ export default function AdminDishes() {
                 isSpecial: Boolean(dish.is_special || dish.isSpecial),
                 isAvailable: dish.is_available !== undefined ? dish.is_available : true,
                 portions: (dish.portions && dish.portions.length > 0) ? dish.portions : [
-                    { value: "regular", label: "Regular", multiplier: 1 }
+                    { value: "regular", label: "Regular", price: Number(dish.basePrice || dish.base_price || 0) }
                 ]
             });
         } else {
@@ -158,7 +158,7 @@ export default function AdminDishes() {
                 isSpecial: false,
                 isAvailable: true,
                 portions: [
-                    { value: "regular", label: "Regular", multiplier: 1 }
+                    { value: "regular", label: "Regular", price: 0 }
                 ]
             });
         }
@@ -177,6 +177,12 @@ export default function AdminDishes() {
 
     const handleSaveDish = async (e) => {
         e.preventDefault();
+        
+        if (!formData.imageUrl) {
+            toast.error('Please upload a dish image');
+            return;
+        }
+
         const payload = {
             id: editingDish?.id,
             name: formData.name,
@@ -188,7 +194,7 @@ export default function AdminDishes() {
             category_id: formData.category,
             images: [formData.imageUrl || '/placeholderfood.png'],
             portions: (formData.portions && formData.portions.length > 0) ? formData.portions : [
-                { value: "regular", label: "Regular", multiplier: 1 }
+                { value: "regular", label: "Regular", price: Number(formData.basePrice) }
             ],
             ingredients: Array.isArray(formData.ingredients)
                 ? formData.ingredients
@@ -206,9 +212,15 @@ export default function AdminDishes() {
             is_available: formData.isAvailable
         };
 
-        await apiService.saveDish(payload);
-        setIsModalOpen(false);
-        loadData();
+        try {
+            await apiService.saveDish(payload);
+            toast.success(`Dish "${payload.name}" saved successfully!`);
+            setIsModalOpen(false);
+            loadData();
+        } catch (err) {
+            console.error('Save dish error:', err);
+            toast.error(err.message || 'Failed to save dish into database.');
+        }
     };
 
     const handleToggleAvailability = async (dish) => {
@@ -536,8 +548,7 @@ export default function AdminDishes() {
                                 <div className="flex flex-wrap gap-2">
                                     {formData.portions && formData.portions.map((p, idx) => {
                                         const isEditing = editingPortionIdx === idx;
-                                        const calculatedPrice = (Number(formData.basePrice || 0) * (p.multiplier || 1)).toFixed(2);
-                                        const liveEditCalculatedPrice = (Number(formData.basePrice || 0) * (Number(editPortionMultiplier) || 1)).toFixed(2);
+                                        const calculatedPrice = p.price !== undefined ? Number(p.price).toFixed(2) : (Number(formData.basePrice || 0) * (p.multiplier || 1)).toFixed(2);
 
                                         if (isEditing) {
                                             return (
@@ -555,16 +566,15 @@ export default function AdminDishes() {
                                                     <div className="flex items-center gap-0.5">
                                                         <input
                                                             type="number"
-                                                            step="0.1"
-                                                            value={editPortionMultiplier}
-                                                            onChange={(e) => setEditPortionMultiplier(e.target.value)}
-                                                            placeholder="1.0"
+                                                            step="0.01"
+                                                            value={editPortionPrice}
+                                                            onChange={(e) => setEditPortionPrice(e.target.value)}
+                                                            placeholder="Price"
                                                             className="w-16 h-7 bg-white border border-slate-300 px-1.5 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
                                                         />
-                                                        <span className="text-[10px] text-slate-500 font-semibold">x</span>
                                                     </div>
                                                     <span className="text-[#114536] text-[11px] font-black bg-white px-1.5 py-0.5 rounded-md border border-emerald-200">
-                                                        ₹{liveEditCalculatedPrice}
+                                                        ₹{Number(editPortionPrice || 0).toFixed(2)}
                                                     </span>
                                                     <button
                                                         type="button"
@@ -599,7 +609,7 @@ export default function AdminDishes() {
                                                     type="button"
                                                     onClick={() => handleStartEditPortion(idx, p)}
                                                     className="text-slate-400 hover:text-[#114536] transition-colors ml-0.5"
-                                                    title="Edit portion size and price multiplier"
+                                                    title="Edit portion size and price"
                                                 >
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
@@ -629,13 +639,13 @@ export default function AdminDishes() {
                                             onChange={(e) => setSelectedPresetPortion(e.target.value)}
                                             className="w-48 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-bold outline-none focus:border-[#114536]"
                                         >
-                                            <option value="Regular">Regular (1x)</option>
-                                            <option value="Large">Large (1.4x)</option>
-                                            <option value="Small">Small (0.8x)</option>
-                                            <option value="Half">Half (0.6x)</option>
-                                            <option value="Full">Full (1.5x)</option>
-                                            <option value="Medium">Medium (1.1x)</option>
-                                            <option value="Family Pack">Family Pack (2.0x)</option>
+                                            <option value="Regular">Regular</option>
+                                            <option value="Large">Large</option>
+                                            <option value="Small">Small</option>
+                                            <option value="Half">Half</option>
+                                            <option value="Full">Full</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="Family Pack">Family Pack</option>
                                             <option value="Other">Other (Custom Size)...</option>
                                         </select>
 
@@ -651,10 +661,10 @@ export default function AdminDishes() {
 
                                         <input
                                             type="number"
-                                            step="0.1"
-                                            placeholder="Multiplier (e.g. 1.2)"
-                                            value={portionMultiplier}
-                                            onChange={(e) => setPortionMultiplier(e.target.value)}
+                                            step="0.01"
+                                            placeholder="Price (e.g. 150)"
+                                            value={portionPrice}
+                                            onChange={(e) => setPortionPrice(e.target.value)}
                                             className="w-32 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
                                         />
 
@@ -664,21 +674,12 @@ export default function AdminDishes() {
                                                 const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
                                                 if (!finalLabel) return;
 
-                                                let defaultMult = Number(portionMultiplier);
-                                                if (!portionMultiplier) {
-                                                    if (selectedPresetPortion === 'Large') defaultMult = 1.4;
-                                                    else if (selectedPresetPortion === 'Small') defaultMult = 0.8;
-                                                    else if (selectedPresetPortion === 'Half') defaultMult = 0.6;
-                                                    else if (selectedPresetPortion === 'Full') defaultMult = 1.5;
-                                                    else if (selectedPresetPortion === 'Medium') defaultMult = 1.1;
-                                                    else if (selectedPresetPortion === 'Family Pack') defaultMult = 2.0;
-                                                    else defaultMult = 1.0;
-                                                }
+                                                let defaultPrice = Number(portionPrice) || Number(formData.basePrice) || 0;
 
                                                 const newChip = {
                                                     value: finalLabel.toLowerCase().replace(/[^a-z0-9]/g, '-'),
                                                     label: finalLabel,
-                                                    multiplier: defaultMult || 1
+                                                    price: defaultPrice
                                                 };
 
                                                 setFormData({
@@ -686,7 +687,7 @@ export default function AdminDishes() {
                                                     portions: [...(formData.portions || []), newChip]
                                                 });
                                                 setCustomPortionLabel('');
-                                                setPortionMultiplier('');
+                                                setPortionPrice('');
                                             }}
                                             className="h-9 px-4 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
                                         >
@@ -701,6 +702,7 @@ export default function AdminDishes() {
                                 onChange={(croppedImg) => setFormData({ ...formData, imageUrl: croppedImg })}
                                 label="Upload Dish Image (File Upload & Crop)"
                                 aspect={4 / 3}
+                                required={true}
                             />
 
                             <div>

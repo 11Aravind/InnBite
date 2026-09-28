@@ -54,11 +54,11 @@ const FoodDetails = () => {
 
     const portions = foodData.portions && foodData.portions.length > 0
         ? foodData.portions
-        : [{ value: "regular", label: "Regular", multiplier: 1 }];
+        : [{ value: "regular", label: "Regular", price: Number(foodData.basePrice || foodData.base_price || 0) }];
 
     const portionObj = portions.find(p => p.value === selectedPortion) || portions[0];
     const basePrice = Number(foodData.basePrice || foodData.base_price || 0);
-    const price = (basePrice * (portionObj?.multiplier || 1)).toFixed(2);
+    const price = (portionObj?.price !== undefined ? Number(portionObj.price) : (basePrice * (portionObj?.multiplier || 1))).toFixed(2);
     const images = foodData.images && foodData.images.length > 0 ? foodData.images : ['/placeholderfood.png'];
     const ingredients = (foodData.ingredients && Array.isArray(foodData.ingredients))
         ? foodData.ingredients
