@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
-import { ChefHat, Check, Clock, CreditCard, X, RefreshCw, Sparkles, UtensilsCrossed, FileText } from 'lucide-react';
+import { ChefHat, Check, Clock, CreditCard, X, RefreshCw, Sparkles, UtensilsCrossed, FileText, MessageSquare } from 'lucide-react';
 
 export default function CustomerOrderDetailsModal({ order: initialOrder, onClose, onOrderMore }) {
     const [order, setOrder] = useState(initialOrder);
@@ -11,10 +11,19 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
         if (!order?.id) return;
         setIsRefreshing(true);
         const allOrders = await apiService.getOrders();
-        const updated = allOrders.find(o => o.id === order.id);
+        const updated = allOrders.find(o => o.id === order.id || o.order_number === order.order_number);
         if (updated) {
-            setOrder(updated);
-            localStorage.setItem('orderly_active_order', JSON.stringify(updated));
+            if (updated.status === 'SERVED' || updated.status === 'completed' || updated.status === 'CANCELLED') {
+                localStorage.removeItem('orderly_active_order');
+                onClose();
+            } else {
+                setOrder(updated);
+                localStorage.setItem('orderly_active_order', JSON.stringify(updated));
+            }
+        } else {
+            // Order was removed from database
+            localStorage.removeItem('orderly_active_order');
+            onClose();
         }
         setIsRefreshing(false);
     };
@@ -30,10 +39,18 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
         if (isSupabaseConfigured && supabase && order?.id) {
             subscription = supabase
                 .channel(`order_track_${order.id}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` }, (payload) => {
-                    if (payload.new) {
-                        setOrder(prev => ({ ...prev, ...payload.new }));
-                        localStorage.setItem('orderly_active_order', JSON.stringify({ ...order, ...payload.new }));
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                    if (payload.eventType === 'DELETE' && (payload.old?.id === order.id)) {
+                        localStorage.removeItem('orderly_active_order');
+                        onClose();
+                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === order.id) {
+                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
+                            localStorage.removeItem('orderly_active_order');
+                            onClose();
+                        } else {
+                            setOrder(prev => ({ ...prev, ...payload.new }));
+                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...order, ...payload.new }));
+                        }
                     }
                 })
                 .subscribe();
@@ -48,10 +65,10 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
     if (!order) return null;
 
     const items = order.order_items || order.items || [];
-    const isPaid = order.payment_status === 'paid';
+    const isPaid = order.payment_status === 'SUCCESS' || order.payment_status === 'paid';
+    const isSelfService = order.service_mode === 'SELF_SERVICE' || (!order.table_number && !order.table_id);
 
-    // Status step index calculation: 1=pending (Received), 2=preparing, 3=completed (Served)
-    const statusMap = { pending: 1, preparing: 2, completed: 3 };
+    const statusMap = { CONFIRMED: 1, ACCEPTED: 2, PREPARING: 2, READY: 3, SERVED: 3, pending: 1, preparing: 2, completed: 3 };
     const currentStep = statusMap[order.status] || 1;
 
     const formatTime = (isoString) => {
@@ -64,37 +81,36 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto font-sans animate-fade-in">
-            <div className="bg-white w-full max-w-lg rounded-[28px] shadow-2xl overflow-hidden flex flex-col my-auto border border-[#ede7de]">
-                
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto font-sans animate-fade-in">
+            <div className="bg-white w-full max-w-lg rounded-[28px] shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200">
+
                 {/* Modal Top Header */}
-                <div className="p-6 pb-4 flex items-center justify-between bg-white border-b border-[#f4efe8]">
+                <div className="p-6 pb-4 flex items-center justify-between bg-white border-b border-slate-100">
                     <div className="flex items-center gap-3.5">
-                        {/* Ochre Golden Circle Badge */}
-                        <div className="w-12 h-12 rounded-full bg-[#c89346] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                            <UtensilsCrossed className="w-6 h-6 stroke-[2.2]" />
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-extrabold shrink-0 shadow-md shadow-emerald-600/20">
+                            <Check className="w-6 h-6 stroke-[3]" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-[#1a1815] tracking-tight leading-tight">
-                                Order Details
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                Order Confirmed
+                            </span>
+                            <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-0.5">
+                                Order #{order.order_number || order.id}
                             </h2>
-                            <p className="text-xs font-semibold text-[#8c8275] mt-0.5">
-                                Order #{order.id}
-                            </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button
                             onClick={refreshOrderStatus}
-                            className={`p-2 text-[#776c5f] hover:text-[#1a1815] hover:bg-[#f5efea] rounded-full transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+                            className={`p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all ${isRefreshing ? 'animate-spin' : ''}`}
                             title="Refresh order status"
                         >
                             <RefreshCw className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 text-[#776c5f] hover:text-[#1a1815] hover:bg-[#f5efea] rounded-full transition-colors"
+                            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
                         >
                             <X className="w-5 h-5 stroke-[2.2]" />
                         </button>
@@ -104,50 +120,68 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                 {/* Body Content */}
                 <div className="p-6 space-y-5 overflow-y-auto max-h-[75vh] bg-white">
 
-                    {/* Section 1: Live Status Timeline Card */}
-                    <div className="bg-[#fbf9f4] rounded-2xl p-4 border border-[#f2ece3] space-y-4">
-                        <div className="flex justify-between items-center text-sm font-extrabold text-[#2a2621]">
-                            <span>Live Status</span>
-                            
-                            {/* Status Pill Badge */}
-                            <span className="capitalize px-3 py-1 rounded-full text-xs font-black bg-[#e2f0e7] text-[#2d6a4f] flex items-center gap-1.5 shadow-2xs">
-                                <span className="w-2 h-2 rounded-full bg-[#2d6a4f] animate-pulse"></span>
-                                {order.status === 'pending' ? 'Pending' : order.status === 'preparing' ? 'Preparing' : 'Served'}
+                    {/* Service Mode Callout Banner */}
+                    {isSelfService ? (
+                        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-center space-y-1">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-900 block">
+                                Self-Service Pickup Order
+                            </span>
+                            <p className="text-sm font-black text-amber-800">
+                                Please keep your order number <span className="underline">#{order.order_number || order.id}</span> to collect food.
+                            </p>
+                            <p className="text-[11px] text-amber-700 font-semibold">
+                                (No table assigned for self-service mode)
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-md flex items-center justify-between">
+                            <div>
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                                    Table Service Order
+                                </span>
+                                <span className="text-lg font-black text-white">
+                                    Table #{order.table_number}
+                                </span>
+                            </div>
+                            <span className="text-xs font-extrabold bg-slate-800 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700">
+                                Table QR Identified
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Live Status Timeline Card */}
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-4">
+                        <div className="flex justify-between items-center text-sm font-extrabold text-slate-900">
+                            <span>Order Progress</span>
+                            <span className="capitalize px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
+                                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                                {order.status || 'CONFIRMED'}
                             </span>
                         </div>
 
-                        {/* Stepper Timeline (3 steps: Received -> Preparing -> Served) */}
+                        {/* Stepper Timeline */}
                         <div className="relative pt-2 pb-1">
-                            {/* Horizontal Connecting Bar */}
-                            <div className="absolute top-6 left-10 right-10 h-[2px] bg-[#e6dfd5] -z-0"></div>
-
                             <div className="grid grid-cols-3 gap-2 relative z-10">
                                 {[
-                                    { step: 1, label: 'Received', icon: Check, time: formatTime(order.created_at) },
-                                    { step: 2, label: 'Preparing', icon: ChefHat, time: currentStep >= 2 ? 'In Progress' : '—' },
-                                    { step: 3, label: 'Served', icon: Check, time: currentStep >= 3 ? 'Completed' : '—' }
+                                    { step: 1, label: 'Confirmed', icon: Check, time: formatTime(order.created_at) },
+                                    { step: 2, label: 'Preparing', icon: ChefHat, time: currentStep >= 2 ? 'In Kitchen' : '—' },
+                                    { step: 3, label: 'Ready/Served', icon: Check, time: currentStep >= 3 ? 'Ready' : '—' }
                                 ].map((st) => {
                                     const isActive = currentStep >= st.step;
                                     const IconComp = st.icon;
 
                                     return (
                                         <div key={st.step} className="flex flex-col items-center gap-1.5 text-center">
-                                            {/* Step Circle Icon */}
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                                                isActive 
-                                                    ? 'bg-[#235c43] text-white shadow-sm ring-4 ring-[#e2f0e7]' 
-                                                    : 'bg-[#ede7de] text-[#8a8175]'
-                                            }`}>
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isActive
+                                                ? 'bg-slate-900 text-white shadow-sm ring-4 ring-slate-200'
+                                                : 'bg-slate-200 text-slate-400'
+                                                }`}>
                                                 <IconComp className="w-4 h-4 stroke-[2.5]" />
                                             </div>
-
-                                            {/* Label */}
-                                            <span className={`text-xs font-bold ${isActive ? 'text-[#235c43] font-black' : 'text-[#8a8175]'}`}>
+                                            <span className={`text-xs font-bold ${isActive ? 'text-slate-900 font-black' : 'text-slate-400'}`}>
                                                 {st.label}
                                             </span>
-
-                                            {/* Time */}
-                                            <span className="text-[10px] text-[#9c9183] font-medium block">
+                                            <span className="text-[10px] text-slate-500 font-medium block">
                                                 {st.time}
                                             </span>
                                         </div>
@@ -157,117 +191,110 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                         </div>
                     </div>
 
-                    {/* Section 2: Table & Customer Information Card */}
-                    <div className="bg-[#fbf9f4] p-4 rounded-2xl border border-[#f2ece3] space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <span className="text-xs font-bold text-[#8c8275] block">Table</span>
-                                <span className="text-lg font-black text-[#1a1815] block mt-0.5">Table #{order.table_number}</span>
-                            </div>
-                            <div>
-                                <span className="text-xs font-bold text-[#8c8275] block">Customer</span>
-                                <span className="text-lg font-black text-[#1a1815] block mt-0.5">{order.customer_name || 'Guest'}</span>
-                            </div>
+                    {/* Payment Details Card */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-emerald-600" />
+                            <span className="font-extrabold text-slate-900">
+                                {isPaid ? 'Payment Verified (SUCCESS)' : 'Payment Pending'}
+                            </span>
                         </div>
-
-                        {/* Payment Status Badges */}
-                        <div className="pt-2 border-t border-[#eee6db] flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 bg-[#e2f0e7] text-[#2d6a4f] px-3 py-1.5 rounded-xl font-bold border border-[#cbe4d4]">
-                                💳 <span>{isPaid ? 'Paid Online 💳' : 'Pay at Counter'}</span>
-                            </div>
-
-                            {order.razorpay_payment_id && (
-                                <div className="flex items-center gap-1 bg-[#f0ece3] text-[#554d42] px-3 py-1.5 rounded-xl font-mono text-[11px] font-bold border border-[#e3dcd0]">
-                                    <FileText className="w-3.5 h-3.5 text-[#887c6e]" />
-                                    <span>Ref: {order.razorpay_payment_id}</span>
-                                </div>
-                            )}
-                        </div>
+                        {order.razorpay_payment_id && (
+                            <span className="font-mono text-[10px] font-bold text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                                ID: {order.razorpay_payment_id}
+                            </span>
+                        )}
                     </div>
 
-                    {/* Section 3: Ordered Items Breakdown */}
+                    {/* Items Breakdown */}
                     <div className="space-y-3">
-                        <h4 className="text-sm font-black text-[#4a4339]">
-                            Ordered Items Breakdown ({items.length})
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Ordered Items & Customizations ({items.length})
                         </h4>
 
                         <div className="space-y-2.5">
-                            {items.map((item, idx) => (
-                                <div
-                                    key={idx}
-                                    className="bg-white border border-[#f0e8dd] rounded-2xl p-3.5 flex items-center justify-between shadow-2xs hover:border-[#dfd3c3] transition-colors"
-                                >
-                                    <div className="flex items-center gap-3.5">
-                                        {/* Dish Image Thumbnail */}
-                                        <div className="w-11 h-11 rounded-xl bg-[#f5efea] overflow-hidden shrink-0 border border-[#e9e2d7] flex items-center justify-center text-[#8c8275] font-bold">
-                                            {item.image || item.image_url ? (
-                                                <img src={item.image || item.image_url} alt={item.dish_name || item.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span>{item.quantity}x</span>
-                                            )}
-                                        </div>
+                            {items.map((item, idx) => {
+                                const customEntries = Object.entries(item.customizations || {});
+                                const instruction = item.special_instruction || item.specialInstruction;
 
-                                        <div>
-                                            <h5 className="font-bold text-[#1a1815] text-sm leading-snug">
-                                                {item.dish_name || item.name}
-                                            </h5>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-xs text-[#8c8275] font-medium">
-                                                    ₹{Number(item.unit_price || item.price).toFixed(2)} each
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="bg-white border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2 shadow-2xs"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-slate-900 text-sm">
+                                                    {item.dish_name || item.name}
                                                 </span>
                                                 {item.portion_label && (
-                                                    <span className="text-[11px] font-bold text-[#8b5e2b] bg-[#fbf4e8] px-1.5 py-0.5 rounded border border-[#f2e2ca]">
+                                                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                                         {item.portion_label}
                                                     </span>
                                                 )}
-                                                <span className="text-xs font-extrabold text-[#1a1815]">
-                                                    x{item.quantity}
+                                                <span className="text-xs font-extrabold text-slate-900">
+                                                    × {item.quantity}
                                                 </span>
                                             </div>
+                                            <span className="font-black text-slate-900 text-sm">
+                                                ₹{(Number(item.unit_price_snapshot || item.unit_price || item.price || 0) * item.quantity).toFixed(2)}
+                                            </span>
                                         </div>
-                                    </div>
 
-                                    <span className="font-black text-[#1a1815] text-base">
-                                        ₹{(Number(item.unit_price || item.price) * item.quantity).toFixed(2)}
-                                    </span>
-                                </div>
-                            ))}
+                                        {/* Customizations tags */}
+                                        {customEntries.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {customEntries.map(([k, v]) => (
+                                                    <span key={k} className="text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                                                        • {v === 'No' ? `No ${k}` : `${k}: ${v}`}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Special Instruction */}
+                                        {instruction && (
+                                            <p className="text-[11px] text-indigo-700 italic bg-indigo-50 px-2 py-1 rounded border border-indigo-100 flex items-center gap-1">
+                                                <MessageSquare className="w-3 h-3 text-indigo-500 shrink-0" />
+                                                <span>Note: "{instruction}"</span>
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* Section 4: Subtotal & Grand Total Card */}
-                    <div className="bg-[#fbf9f4] p-4 rounded-2xl border border-[#f2ece3] space-y-2.5">
-                        <div className="flex justify-between text-xs font-semibold text-[#8c8275]">
-                            <span>Items Subtotal</span>
-                            <span className="font-bold text-[#332e27]">₹{Number(order.total_amount).toFixed(2)}</span>
+                    {/* Grand Total */}
+                    <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-md flex justify-between items-center">
+                        <div>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                                Grand Total Paid
+                            </span>
+                            <span className="text-xs text-slate-400">All Taxes & Charges Included</span>
                         </div>
-                        <div className="flex justify-between text-xs font-semibold text-[#8c8275] pb-2.5 border-b border-[#eee6db]">
-                            <span>Taxes & Service</span>
-                            <span className="font-bold text-[#332e27]">Included</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-1">
-                            <span className="text-sm font-black text-[#1a1815]">Grand Total Paid</span>
-                            <span className="text-2xl font-black text-[#235c43]">₹{Number(order.total_amount).toFixed(2)}</span>
-                        </div>
+                        <span className="text-2xl font-black text-white">
+                            ₹{Number(order.total_amount || order.subtotal || 0).toFixed(2)}
+                        </span>
                     </div>
                 </div>
 
                 {/* Footer Action Buttons */}
-                <div className="p-5 bg-white border-t border-[#f4efe8] flex gap-3">
+                <div className="p-5 bg-white border-t border-slate-100 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-3.5 px-4 bg-[#fbf9f4] border border-[#dfd3c3] text-[#332e27] font-extrabold rounded-2xl hover:bg-[#f5efea] transition-colors text-sm shadow-2xs"
+                        className="flex-1 py-3.5 px-4 bg-slate-100 border border-slate-200 text-slate-800 font-extrabold rounded-2xl hover:bg-slate-200 transition-colors text-xs"
                     >
-                        Close
+                        Close Window
                     </button>
                     <button
                         onClick={() => {
                             onClose();
                             if (onOrderMore) onOrderMore();
                         }}
-                        className="flex-1 py-3.5 px-4 bg-[#8b5e2b] text-white font-extrabold rounded-2xl hover:bg-[#785023] transition-colors text-sm shadow-md"
+                        className="flex-1 py-3.5 px-4 bg-slate-900 text-white font-extrabold rounded-2xl hover:bg-slate-800 transition-colors text-xs shadow-md"
                     >
-                        Order More Dishes
+                        Order More Food
                     </button>
                 </div>
             </div>

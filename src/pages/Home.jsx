@@ -9,7 +9,9 @@ import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
+import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
+import { APP_CONFIG } from '../config';
 import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
 
 export default function Home() {
@@ -37,19 +39,62 @@ export default function Home() {
     const [allDishes, setAllDishes] = useState([]);
     const [apiLoading, setApiLoading] = useState(true);
 
+    const validateActiveOrder = async (orderToCheck) => {
+        if (!orderToCheck || !orderToCheck.id) return;
+        const allOrders = await apiService.getOrders();
+        const found = allOrders.find(o => o.id === orderToCheck.id || o.order_number === orderToCheck.order_number);
+
+        if (!found || found.status === 'SERVED' || found.status === 'completed' || found.status === 'CANCELLED') {
+            localStorage.removeItem('orderly_active_order');
+            setActiveOrder(null);
+        } else {
+            setActiveOrder(found);
+            localStorage.setItem('orderly_active_order', JSON.stringify(found));
+        }
+    };
+
     useEffect(() => {
         const storedOrder = localStorage.getItem('orderly_active_order');
         if (storedOrder) {
             try {
                 const parsed = JSON.parse(storedOrder);
                 if (parsed && parsed.id) {
-                    setActiveOrder(parsed);
+                    validateActiveOrder(parsed);
                 }
             } catch (e) {
                 console.error('Error parsing stored active order:', e);
             }
         }
     }, []);
+
+    useEffect(() => {
+        let subscription;
+        if (isSupabaseConfigured && supabase && activeOrder?.id) {
+            subscription = supabase
+                .channel(`home_order_track_${activeOrder.id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                    if (payload.eventType === 'DELETE' && (payload.old?.id === activeOrder.id)) {
+                        localStorage.removeItem('orderly_active_order');
+                        setActiveOrder(null);
+                        setShowOrderModal(false);
+                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === activeOrder.id) {
+                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
+                            localStorage.removeItem('orderly_active_order');
+                            setActiveOrder(null);
+                            setShowOrderModal(false);
+                        } else {
+                            setActiveOrder(prev => ({ ...prev, ...payload.new }));
+                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...activeOrder, ...payload.new }));
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        return () => {
+            if (subscription) supabase.removeChannel(subscription);
+        };
+    }, [activeOrder?.id]);
 
     useEffect(() => {
         const tableFromUrl = searchParams.get('table');
@@ -139,7 +184,7 @@ export default function Home() {
                     </div>
                     <div className="flex flex-col items-center flex-1">
                         <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
-                            InnBite
+                            {APP_CONFIG.APP_NAME}
                         </h2>
                         <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -148,6 +193,19 @@ export default function Home() {
                     </div>
                     <CallButton />
                 </div>
+
+                {/* Shop Closed Banner */}
+                {homeData?.settings?.is_closed && (
+                    <div className="bg-rose-50 border-b border-rose-200 px-4 py-3 flex items-start gap-3 sticky top-0 z-10 shadow-sm">
+                        <div className="mt-0.5 bg-rose-100 text-rose-600 rounded-full p-1 shrink-0">
+                            <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <p className="text-[#171212] text-sm font-bold leading-tight">We are currently closed</p>
+                            <p className="text-rose-600 text-xs font-semibold mt-0.5">Online ordering is temporarily paused because the shop is closed.</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Active Order Banner for Customer (Yellow/Gold Modal Theme) */}
                 {activeOrder && (
@@ -242,16 +300,16 @@ export default function Home() {
                                     banners.map((banner) => (
                                         <div
                                             key={banner.id}
-                                            className="flex h-full flex-1 flex-col gap-2 rounded-2xl min-w-[280px] sm:min-w-[320px] snap-start cursor-pointer group"
+                                            className="flex h-full w-[280px] sm:w-[320px] shrink-0 flex-col gap-4 rounded-lg snap-start cursor-pointer"
                                             onClick={() => banner.dish_id && navigate(`/FoodDetails/${banner.dish_id}`)}
                                         >
                                             <ImageWithSkeleton
                                                 src={banner.image_url}
                                                 alt={banner.title}
                                                 aspectRatio="aspect-video"
-                                                className="w-full rounded-2xl shadow-sm border border-slate-100 group-hover:shadow-md transition-shadow"
+                                                className="w-full bg-center bg-no-repeat bg-cover rounded-xl flex flex-col"
                                             />
-                                            <p className="text-slate-900 text-sm font-bold leading-tight px-1">
+                                            <p className="text-[#171212] text-base font-medium leading-normal">
                                                 {banner.title}
                                             </p>
                                         </div>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
 import DataTable from '../../components/DataTable';
 import { ImageFileInput } from '../../components/ImageUploadCropModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import {
     Plus,
     Edit2,
@@ -48,21 +50,50 @@ export default function AdminCategories() {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        await apiService.saveCategory({
-            id: editingCategory?.id,
-            name,
-            description,
-            image_url: imageUrl || '/placeholderfood.png',
-            image: imageUrl || '/placeholderfood.png'
-        });
-        setIsModalOpen(false);
-        loadData();
+        if (!imageUrl) {
+            toast.error('Please upload a category image');
+            return;
+        }
+        try {
+            await apiService.saveCategory({
+                id: editingCategory?.id,
+                name,
+                description,
+                image_url: imageUrl
+            });
+            toast.success(`Category "${name}" saved successfully!`);
+            setIsModalOpen(false);
+            loadData();
+        } catch (err) {
+            console.error('Save category error:', err);
+            toast.error(err.message || 'Failed to save category into database.');
+        }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Delete category?')) {
-            await apiService.deleteCategory(id);
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [catToDelete, setCatToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = (cat) => {
+        setCatToDelete(cat);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!catToDelete) return;
+        setIsDeleting(true);
+        try {
+            await apiService.deleteCategory(catToDelete.id);
+            toast.success(`Category "${catToDelete.name}" deleted successfully!`);
+            setDeleteModalOpen(false);
+            setCatToDelete(null);
             loadData();
+        } catch (err) {
+            console.error('Delete category error:', err);
+            toast.error('Failed to delete category. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -73,11 +104,15 @@ export default function AdminCategories() {
             header: 'Category Details',
             cell: ({ row }) => {
                 const cat = row.original;
-                const img = cat.image_url || cat.image || '/placeholderfood.png';
+                const img = cat.image_url || cat.image;
                 return (
                     <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-2xs">
-                            <img src={img} alt={cat.name} className="w-full h-full object-cover" />
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 shadow-2xs flex items-center justify-center text-slate-400">
+                            {img ? (
+                                <img src={img} alt={cat.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <FolderKanban className="w-6 h-6 text-slate-400" />
+                            )}
                         </div>
                         <div>
                             <h4 className="font-bold text-slate-900 text-sm">{cat.name}</h4>
@@ -121,8 +156,8 @@ export default function AdminCategories() {
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                            onClick={() => handleDelete(cat.id)}
-                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors"
+                            onClick={() => handleDeleteClick(cat)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors cursor-pointer"
                             title="Delete Category"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -139,13 +174,13 @@ export default function AdminCategories() {
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        Food Categories <FolderKanban className="w-5 h-5 text-rose-500" />
+                        Food Categories <FolderKanban className="w-5 h-5 text-themePrimary" />
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Manage food menu categories powered by TanStack Table</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Category</span>
@@ -176,13 +211,15 @@ export default function AdminCategories() {
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Category Name *</label>
+                                <label className="text-xs font-bold text-slate-700 block mb-1">
+                                    Category Name <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-medium"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
                                 />
                             </div>
                             <ImageFileInput
@@ -190,6 +227,7 @@ export default function AdminCategories() {
                                 onChange={(croppedImg) => setImageUrl(croppedImg)}
                                 label="Upload Category Image (File Upload & Crop)"
                                 aspect={1 / 1}
+                                required={true}
                             />
                             <div>
                                 <label className="text-xs font-bold text-slate-700 block mb-1">Description</label>
@@ -197,17 +235,31 @@ export default function AdminCategories() {
                                     rows="2"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500"
+                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary"
                                 />
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-500/20">Save Category</button>
+                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Category</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Reusable Confirm Delete Modal */}
+            <ConfirmDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setCatToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                title="Delete Category"
+                message="Are you sure you want to delete this category? This action cannot be undone."
+                itemTitle={catToDelete?.name}
+                loading={isDeleting}
+            />
         </div>
     );
 }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
 import DataTable from '../../components/DataTable';
 import { ImageFileInput } from '../../components/ImageUploadCropModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import {
     Plus,
     Edit2,
@@ -54,23 +56,55 @@ export default function AdminBanners() {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        await apiService.saveBanner({
-            id: editingBanner?.id,
-            title,
-            image_url: imageUrl,
-            dish_id: dishId || null
-        });
-        setIsModalOpen(false);
-        setTitle('');
-        setImageUrl('');
-        setDishId('');
-        loadData();
+
+        if (!imageUrl) {
+            toast.error('Please upload a banner image');
+            return;
+        }
+
+        try {
+            await apiService.saveBanner({
+                id: editingBanner?.id,
+                title,
+                image_url: imageUrl,
+                dish_id: dishId || null
+            });
+            toast.success(`Banner "${title}" saved successfully!`);
+            setIsModalOpen(false);
+            setTitle('');
+            setImageUrl('');
+            setDishId('');
+            loadData();
+        } catch (err) {
+            console.error('Save banner error:', err);
+            toast.error(err.message || 'Failed to save banner.');
+        }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Delete promotional banner?')) {
-            await apiService.deleteBanner(id);
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [bannerToDelete, setBannerToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = (banner) => {
+        setBannerToDelete(banner);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!bannerToDelete) return;
+        setIsDeleting(true);
+        try {
+            await apiService.deleteBanner(bannerToDelete.id);
+            toast.success(`Banner "${bannerToDelete.title}" deleted successfully!`);
+            setDeleteModalOpen(false);
+            setBannerToDelete(null);
             loadData();
+        } catch (err) {
+            console.error('Delete banner error:', err);
+            toast.error('Failed to delete banner. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -102,16 +136,16 @@ export default function AdminBanners() {
         },
         {
             accessorKey: 'dish_id',
-            header: 'Linked Dish Target',
+            header: 'Link Target URL',
             cell: ({ row }) => {
                 const b = row.original;
                 return b.dish_id ? (
-                    <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 font-bold text-xs inline-flex items-center gap-1.5">
-                        <LinkIcon className="w-3.5 h-3.5 text-amber-600" />
-                        {getLinkedDishName(b.dish_id)}
+                    <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 font-bold text-xs inline-flex items-center gap-1.5 truncate max-w-[200px]" title={b.dish_id}>
+                        <LinkIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">{b.dish_id}</span>
                     </span>
                 ) : (
-                    <span className="text-slate-400 italic">No linked dish</span>
+                    <span className="text-slate-400 italic">No link</span>
                 );
             }
         },
@@ -136,8 +170,8 @@ export default function AdminBanners() {
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                            onClick={() => handleDelete(b.id)}
-                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors"
+                            onClick={() => handleDeleteClick(b)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors cursor-pointer"
                             title="Delete Banner"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -154,13 +188,13 @@ export default function AdminBanners() {
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        Promotional Banners <ImageIcon className="w-5 h-5 text-rose-500" />
+                        Promotional Banners <ImageIcon className="w-5 h-5 text-themePrimary" />
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Manage promotional carousel banners powered by TanStack Table</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Banner</span>
@@ -191,13 +225,15 @@ export default function AdminBanners() {
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Banner Title *</label>
+                                <label className="text-xs font-bold text-slate-700 block mb-1">
+                                    Banner Title <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-medium"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
                                 />
                             </div>
                             <ImageFileInput
@@ -207,26 +243,37 @@ export default function AdminBanners() {
                                 aspect={16 / 9}
                             />
                             <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Link to Dish (Optional)</label>
-                                <select
+                                <label className="text-xs font-bold text-slate-700 block mb-1">Link URL (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="https://example.com/some-page"
                                     value={dishId}
                                     onChange={(e) => setDishId(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-bold"
-                                >
-                                    <option value="">-- No link --</option>
-                                    {dishes.map((d) => (
-                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                </select>
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
+                                />
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-500/20">Save Banner</button>
+                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Banner</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Reusable Confirm Delete Modal */}
+            <ConfirmDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setBannerToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                title="Delete Promo Banner"
+                message="Are you sure you want to delete this promotional banner?"
+                itemTitle={bannerToDelete?.title}
+                loading={isDeleting}
+            />
         </div>
     );
 }

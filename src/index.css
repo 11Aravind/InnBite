@@ -3,8 +3,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --color-primary: #114536;
+    --color-primary-hover: #0c382b;
+    --color-primary-light: #e6f4f0;
+    --color-primary-border: #195947;
+}
+
 body {
     font-family: "Plus Jakarta Sans", sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
+}
+
+@layer components {
+    .btn-primary {
+        @apply bg-[#114536] hover:bg-[#0c382b] text-white font-bold rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-50 inline-flex items-center justify-center gap-2 cursor-pointer;
+    }
+
+    .btn-secondary {
+        @apply bg-white hover:bg-emerald-50/70 text-[#114536] border border-[#114536]/20 font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] inline-flex items-center justify-center gap-2 cursor-pointer;
+    }
+
+    .badge-primary {
+        @apply bg-[#114536]/10 text-[#114536] border border-[#114536]/20 px-2.5 py-0.5 rounded-full text-xs font-bold;
+    }
 }

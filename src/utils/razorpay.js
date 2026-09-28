@@ -1,3 +1,5 @@
+import { APP_CONFIG } from '../config';
+
 // Dynamic Razorpay Checkout Script Loader
 export const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -27,7 +29,7 @@ export const openRazorpayCheckout = async ({ amount, orderId, customerName, cust
         key: keyId,
         amount: Math.round(amount * 100), // Amount in paise
         currency: 'INR',
-        name: 'InnBite Restaurant',
+        name: `${APP_CONFIG.APP_NAME} Restaurant`,
         description: `Order Payment for Table #${orderId || 'Order'}`,
         image: '/logo.svg',
         handler: function (response) {
