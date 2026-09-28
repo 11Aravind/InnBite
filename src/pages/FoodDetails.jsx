@@ -7,6 +7,7 @@ import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Sparkles, MessageSquare, Plus, Check, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { APP_CONFIG } from '../config';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -143,8 +144,8 @@ const FoodDetails = () => {
                             <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
                         </svg>
                     </div>
-                    <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
-                        ORDERLY
+                    <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center uppercase">
+                        {APP_CONFIG.APP_NAME}
                     </h2>
                     <div className="flex items-center gap-3">
                         <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-[#171312] transition-transform active:scale-95">
