@@ -284,11 +284,11 @@ export default function Cart() {
                     <div className="flex px-4 py-3 max-w-lg mx-auto w-full">
                         <button
                             onClick={handlePlaceOrder}
-                            disabled={isSubmitting}
-                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#edc3ba] text-[#171312] text-base font-bold leading-normal tracking-[0.015em] transition-transform active:scale-[0.99] disabled:opacity-50"
+                            disabled={isSubmitting || settings?.is_closed}
+                            className={`flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] transition-transform ${settings?.is_closed ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#edc3ba] text-[#171312] active:scale-[0.99] hover:bg-[#e4b5ab]'} disabled:opacity-50`}
                         >
                             <span className="truncate">
-                                {isSubmitting ? 'Processing...' : 'Checkout'}
+                                {settings?.is_closed ? 'Shop is Closed' : isSubmitting ? 'Processing...' : 'Checkout'}
                             </span>
                         </button>
                     </div>

@@ -23,11 +23,16 @@ const FoodDetails = () => {
     const [ingredientOptions, setIngredientOptions] = useState({});
     const [specialInstruction, setSpecialInstruction] = useState('');
 
+    const [settings, setSettings] = useState(null);
+
     useEffect(() => {
         window.scrollTo(0, 0);
         setLoading(true);
-        apiService.getDishById(foodId)
-            .then(data => {
+        Promise.all([
+            apiService.getDishById(foodId),
+            apiService.getRestaurantSettings()
+        ])
+            .then(([data, settingsData]) => {
                 if (data) {
                     setFoodData(data);
                     const defaultPortion = (data.portions && data.portions.length > 0)
@@ -35,8 +40,11 @@ const FoodDetails = () => {
                         : "regular";
                     setSelectedPortion(defaultPortion);
                 }
+                if (settingsData) {
+                    setSettings(settingsData);
+                }
             })
-            .catch(err => console.error('Error fetching dish:', err))
+            .catch(err => console.error('Error fetching data:', err))
             .finally(() => setLoading(false));
     }, [foodId]);
 
@@ -67,6 +75,12 @@ const FoodDetails = () => {
             ? foodData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
             : [];
     
+    const ingredientsList = Array.isArray(foodData.ingredients_list) 
+        ? foodData.ingredients_list 
+        : typeof foodData.ingredients_list === 'string'
+            ? foodData.ingredients_list.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+
     const allergensList = Array.isArray(foodData.allergens)
         ? foodData.allergens
         : typeof foodData.allergens === 'string'
@@ -194,7 +208,7 @@ const FoodDetails = () => {
                 <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-0.5 pt-5">
                     {foodData.name}
                 </h1>
-                <p className="text-[#f05a4a] text-lg font-bold leading-normal pb-3 pt-0 px-4">
+                <p className="text-[#836c67] text-sm font-normal leading-normal pb-3 pt-1 px-4">
                     ₹{price}
                 </p>
                 <p className="text-[#171312] text-base font-normal leading-normal pb-3 pt-1 px-4">
@@ -228,13 +242,13 @@ const FoodDetails = () => {
                     </div>
                 )}
 
-                {/* Ingredients */}
-                {ingredients.length > 0 && (
+                {/* Ingredients Display */}
+                {ingredientsList.length > 0 && (
                     <>
                         <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Ingredients</h3>
                         <div className="flex gap-3 p-3 overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <div className="flex flex-nowrap">
-                                {ingredients.map((ing, idx) => (
+                                {ingredientsList.map((ing, idx) => (
                                     <div key={idx} className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f4f1f1] px-4 mr-2">
                                         <p className="text-[#171312] text-sm font-medium leading-normal whitespace-nowrap">{ing}</p>
                                     </div>
@@ -257,7 +271,7 @@ const FoodDetails = () => {
                 {/* Allergens */}
                 {allergensList.length > 0 && (
                     <div className="flex items-center gap-4 bg-white px-4 min-h-14 mt-2">
-                        <div className="text-rose-600 flex items-center justify-center rounded-lg bg-rose-100 shrink-0 size-10">
+                        <div className="text-[#171312] flex items-center justify-center rounded-lg bg-[#f4f1f1] shrink-0 size-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
                                 <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"></path>
                             </svg>
@@ -271,7 +285,7 @@ const FoodDetails = () => {
                 {/* Taste Profile */}
                 {tasteProfileList.length > 0 && (
                     <div className="flex items-center gap-4 bg-white px-4 min-h-14">
-                        <div className="text-emerald-700 flex items-center justify-center rounded-lg bg-emerald-100 shrink-0 size-10">
+                        <div className="text-[#171312] flex items-center justify-center rounded-lg bg-[#f4f1f1] shrink-0 size-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
                                 <path d="M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z"></path>
                             </svg>
@@ -344,12 +358,15 @@ const FoodDetails = () => {
                     <button
                         type="button"
                         onClick={handleAddToCart}
-                        className="flex flex-1 max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#edc3ba] text-[#171312] text-base font-bold leading-normal tracking-[0.015em] gap-2 active:scale-95 transition-transform"
+                        disabled={settings?.is_closed}
+                        className={`flex flex-1 max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-transform ${settings?.is_closed ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#edc3ba] text-[#171312] active:scale-95'}`}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
-                        </svg>
-                        <span className="truncate">Add Item</span>
+                        {!settings?.is_closed && (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
+                            </svg>
+                        )}
+                        <span className="truncate">{settings?.is_closed ? 'Shop is Closed' : 'Add Item'}</span>
                     </button>
                 </div>
             </div>
