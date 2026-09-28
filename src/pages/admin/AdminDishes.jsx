@@ -30,6 +30,7 @@ export default function AdminDishes() {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
+        preparation: '',
         basePrice: '',
         category: 'main-courses',
         imageUrl: '',
@@ -79,6 +80,7 @@ export default function AdminDishes() {
             setFormData({
                 name: dish.name || '',
                 description: dish.description || '',
+                preparation: dish.preparation || dish.preparation_details || '',
                 basePrice: dish.basePrice || dish.base_price || '',
                 category: dish.category || dish.category_id || (categories[0]?.id || 'main-courses'),
                 imageUrl: (dish.images && dish.images[0]) || dish.image || '',
@@ -94,6 +96,7 @@ export default function AdminDishes() {
             setFormData({
                 name: '',
                 description: '',
+                preparation: '',
                 basePrice: '',
                 category: categories[0]?.id || 'main-courses',
                 imageUrl: '',
@@ -114,6 +117,7 @@ export default function AdminDishes() {
             id: editingDish?.id,
             name: formData.name,
             description: formData.description,
+            preparation: formData.preparation,
             basePrice: Number(formData.basePrice),
             base_price: Number(formData.basePrice),
             category: formData.category,
@@ -417,7 +421,18 @@ export default function AdminDishes() {
                                     rows="2"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900"
+                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 block mb-1">Preparation Details</label>
+                                <textarea
+                                    rows="2"
+                                    placeholder="e.g. Hand-tossed pizza dough topped with San Marzano tomatoes, fresh mozzarella..."
+                                    value={formData.preparation}
+                                    onChange={(e) => setFormData({ ...formData, preparation: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
                                 />
                             </div>
 

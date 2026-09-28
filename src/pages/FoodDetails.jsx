@@ -5,7 +5,7 @@ import { useCart } from 'react-use-cart';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
-import { Sparkles, MessageSquare, Plus, Check } from 'lucide-react';
+import { Sparkles, MessageSquare, Plus, Check, AlertTriangle } from 'lucide-react';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -65,7 +65,18 @@ const FoodDetails = () => {
     const price = (basePrice * (portionObj?.multiplier || 1)).toFixed(2);
     const images = foodData.images && foodData.images.length > 0 ? foodData.images : ['/placeholderfood.png'];
     const ingredients = foodData.ingredients || ['Cheese', 'Onion', 'Garlic', 'Herbs'];
-    const allergens = foodData.allergens || [];
+    
+    const allergensList = Array.isArray(foodData.allergens)
+        ? foodData.allergens
+        : typeof foodData.allergens === 'string'
+            ? foodData.allergens.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+
+    const tasteProfileList = Array.isArray(foodData.tasteProfile || foodData.taste_profile)
+        ? (foodData.tasteProfile || foodData.taste_profile)
+        : typeof (foodData.tasteProfile || foodData.taste_profile) === 'string'
+            ? (foodData.tasteProfile || foodData.taste_profile).split(',').map(s => s.trim()).filter(Boolean)
+            : [];
 
     const handleBack = () => {
         navigate(-1);
@@ -87,7 +98,6 @@ const FoodDetails = () => {
             }
         });
 
-        // Requirement Sec 30: Unique item ID ensures quantity-level customization differentiation
         const customHash = JSON.stringify(activeCustomizations) + '_' + specialInstruction.trim();
         const uniqueCartItemId = `${foodData.id}-${selectedPortion || 'reg'}-${customHash.replace(/[^a-zA-Z0-9]/g, '')}`;
 
@@ -128,7 +138,7 @@ const FoodDetails = () => {
                 </div>
 
                 {/* Main Content Card */}
-                <div className="p-4 max-w-lg mx-auto space-y-6">
+                <div className="p-4 max-w-lg mx-auto space-y-5">
                     {/* Image */}
                     <div className="bg-white rounded-3xl p-3 shadow-sm border border-slate-200/80">
                         <ImageWithSkeleton
@@ -153,6 +163,44 @@ const FoodDetails = () => {
                             {foodData.description}
                         </p>
                     </div>
+
+                    {/* Preparation Section */}
+                    {foodData.preparation && (
+                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-2">
+                            <h3 className="text-base font-black text-slate-900 tracking-tight">
+                                Preparation
+                            </h3>
+                            <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                                {foodData.preparation}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Contains: Allergens Warning Pill */}
+                    {allergensList.length > 0 && (
+                        <div className="bg-rose-50/90 border border-rose-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
+                            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-4.5 h-4.5 stroke-[2.5]" />
+                            </div>
+                            <div className="text-sm leading-tight">
+                                <span className="font-extrabold text-rose-700">Contains: </span>
+                                <span className="font-semibold text-rose-600">{allergensList.join(', ')}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Taste Profile Sparkles Pill */}
+                    {tasteProfileList.length > 0 && (
+                        <div className="bg-sky-50/90 border border-sky-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
+                            <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                                <Sparkles className="w-4.5 h-4.5 stroke-[2.5]" />
+                            </div>
+                            <div className="text-sm leading-tight">
+                                <span className="font-extrabold text-sky-900">Taste Profile: </span>
+                                <span className="font-semibold text-sky-700">{tasteProfileList.join(', ')}</span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Portions */}
                     {portions.length > 0 && (
