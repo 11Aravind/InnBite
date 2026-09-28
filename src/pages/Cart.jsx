@@ -135,64 +135,55 @@ export default function Cart() {
     }
 
     return (
-        <div className="container relative flex size-full min-h-screen flex-col bg-slate-50 justify-between font-sans overflow-x-hidden max-w-lg mx-auto">
+        <div className="container relative flex size-full min-h-screen flex-col bg-white justify-between overflow-x-hidden max-w-lg mx-auto font-sans">
             <div>
                 {/* Header */}
-                <div className="flex items-center bg-white p-4 justify-between border-b border-slate-100 shadow-sm sticky top-0 z-20">
-                    <button
+                <div className="flex items-center bg-white p-4 pb-2 justify-between sticky top-0 z-20">
+                    <div 
+                        className="text-[#171312] flex size-12 shrink-0 items-center cursor-pointer" 
                         onClick={handleClose}
-                        className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 hover:bg-slate-200 transition-colors"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
                         </svg>
-                    </button>
-                    <h2 className="text-slate-900 text-base font-extrabold tracking-tight">
-                        Your Order Cart
+                    </div>
+                    <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
+                        Your Order
                     </h2>
-                    <div className="w-10" />
                 </div>
 
                 {/* Service Mode & Table Banner */}
                 <div className="p-4">
                     {isSelfService ? (
-                        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200/80 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                                🛒
-                            </div>
+                        <div className="bg-[#f4f1f1] p-4 rounded-2xl flex items-center gap-3">
                             <div>
-                                <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">
+                                <span className="text-sm font-bold text-[#171312] uppercase tracking-wider block">
                                     Self-Service Hotel Mode
                                 </span>
-                                <span className="text-xs text-amber-700 font-semibold">
+                                <span className="text-xs text-[#836c67] font-semibold mt-1 block">
                                     No table number required. You will collect your food using your unique Order Number.
                                 </span>
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                                    📍
-                                </div>
-                                <div>
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                                        Table Assignment
-                                    </span>
-                                    <span className="text-sm font-black text-slate-900">
-                                        Table #{tableNumber}
-                                    </span>
-                                </div>
+                        <div className="bg-[#f4f1f1] p-4 rounded-2xl flex items-center justify-between">
+                            <div>
+                                <span className="text-xs font-bold text-[#836c67] uppercase tracking-wider block">
+                                    Table Assignment
+                                </span>
+                                <span className="text-sm font-black text-[#171312]">
+                                    Table #{tableNumber}
+                                </span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                                <label className="text-xs text-slate-500 font-bold">No:</label>
+                            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                                <label className="text-xs text-[#836c67] font-bold">No:</label>
                                 <input
                                     type="number"
                                     min="1"
                                     max="99"
                                     value={tableNumber}
                                     onChange={handleTableChange}
-                                    className="w-10 text-center text-xs font-extrabold outline-none bg-transparent text-slate-900"
+                                    className="w-10 text-center text-xs font-extrabold outline-none bg-transparent text-[#171312] p-0 border-none focus:ring-0"
                                 />
                             </div>
                         </div>
@@ -208,25 +199,24 @@ export default function Cart() {
                 )}
 
                 {/* Items List */}
-                <div className="px-4">
-                    <h3 className="text-slate-900 text-xs font-bold uppercase tracking-wider pb-3">
-                        Items in Cart ({items.length})
-                    </h3>
+                <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-2">
+                    Items
+                </h3>
 
-                    {isEmpty ? (
-                        <div className="bg-white p-12 rounded-3xl border border-slate-200/80 text-center text-slate-500 space-y-3 shadow-sm">
-                            <span className="text-5xl block mb-2">🛒</span>
-                            <p className="text-sm font-bold text-slate-800">Your cart is currently empty.</p>
-                            <p className="text-xs text-slate-500">Scan menu items to add them to your session.</p>
-                            <button
-                                onClick={() => navigate('/')}
-                                className="mt-4 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md hover:bg-slate-800 transition-all"
-                            >
-                                Browse Menu
-                            </button>
-                        </div>
-                    ) : (
-                        items.map(item => (
+                {isEmpty ? (
+                    <div className="px-4 py-8 text-center">
+                        <p className="text-sm font-bold text-[#171312]">Your cart is currently empty.</p>
+                        <p className="text-xs text-[#836c67] mt-1">Scan menu items to add them to your session.</p>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="mt-6 px-6 py-3 bg-[#f4f1f1] text-[#171312] rounded-full text-sm font-bold hover:bg-slate-200 transition-all"
+                        >
+                            Browse Menu
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex flex-col">
+                        {items.map(item => (
                             <CartItem
                                 key={item.id}
                                 {...item}
@@ -234,76 +224,74 @@ export default function Cart() {
                                 onDecrease={() => updateItemQuantity(item.id, item.quantity - 1)}
                                 onRemove={() => removeItem(item.id)}
                             />
-                        ))
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {!isEmpty && (
-                    <div className="p-4 space-y-4 pb-32">
+                    <>
                         {/* Customer Details Form */}
-                        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-3">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                Guest Customer Info (Optional)
+                        <div className="px-4 py-4 space-y-3 border-t border-[#f4f1f1] mt-4">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">
+                                Guest Details
                             </h3>
                             <input
                                 type="text"
                                 placeholder="Your Name (e.g. John)"
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
+                                className="w-full px-4 py-3 bg-[#f4f1f1] border-none rounded-xl text-sm font-medium text-[#171312] outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-[#836c67]"
                             />
                             <input
                                 type="tel"
                                 placeholder="Phone Number"
                                 value={customerPhone}
                                 onChange={(e) => setCustomerPhone(e.target.value)}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
+                                className="w-full px-4 py-3 bg-[#f4f1f1] border-none rounded-xl text-sm font-medium text-[#171312] outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-[#836c67]"
                             />
                         </div>
 
                         {/* Order Summary */}
-                        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                                Order Summary
-                            </h3>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Subtotal</span>
-                                <span>₹{cartTotal.toFixed(2)}</span>
+                        <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                            Order Summary
+                        </h3>
+                        <div className="p-4">
+                            <div className="flex justify-between gap-x-6 py-2">
+                                <p className="text-[#836c67] text-sm font-normal leading-normal">Subtotal</p>
+                                <p className="text-[#171312] text-sm font-normal leading-normal text-right">₹{cartTotal.toFixed(2)}</p>
                             </div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Taxes & Fees</span>
-                                <span className="text-emerald-600 font-bold">Included</span>
-                            </div>
-                            <div className="flex justify-between pt-3 border-t border-slate-100 text-sm font-black text-slate-900">
-                                <span>Total Payable</span>
-                                <span className="text-base text-rose-600">₹{cartTotal.toFixed(2)}</span>
+                            <div className="flex justify-between gap-x-6 py-2">
+                                <p className="text-[#836c67] text-sm font-normal leading-normal">Taxes & Fees</p>
+                                <p className="text-[#171312] text-sm font-normal leading-normal text-right text-emerald-600">Included</p>
                             </div>
                         </div>
-                    </div>
+                        <div className="p-4 border-t border-[#f4f1f1]">
+                            <div className="flex justify-between gap-x-6 py-2">
+                                <p className="text-[#836c67] text-sm font-normal leading-normal">Total</p>
+                                <p className="text-[#171312] text-sm font-bold leading-normal text-right">₹{cartTotal.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="h-5 bg-white pb-24"></div>
+                    </>
                 )}
             </div>
 
-            {/* Sticky Confirm Order Bar */}
+            {/* Sticky Checkout Button */}
             {!isEmpty && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-30 shadow-2xl">
-                    <div className="max-w-lg mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 bg-white sm:relative z-30">
+                    <div className="flex px-4 py-3 max-w-lg mx-auto w-full">
                         <button
                             onClick={handlePlaceOrder}
                             disabled={isSubmitting}
-                            className="w-full py-4 px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-between transition-all disabled:opacity-50"
+                            className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#edc3ba] text-[#171312] text-base font-bold leading-normal tracking-[0.015em] transition-transform active:scale-[0.99] disabled:opacity-50"
                         >
-                            {isSubmitting ? (
-                                <span>Verifying & Processing Order...</span>
-                            ) : (
-                                <>
-                                    <span>Confirm & Pay Online</span>
-                                    <span className="bg-white/20 px-3 py-1 rounded-xl text-xs font-bold">
-                                        ₹{cartTotal.toFixed(2)}
-                                    </span>
-                                </>
-                            )}
+                            <span className="truncate">
+                                {isSubmitting ? 'Processing...' : 'Checkout'}
+                            </span>
                         </button>
                     </div>
+                    <div className="h-5 bg-white sm:hidden"></div>
                 </div>
             )}
         </div>
