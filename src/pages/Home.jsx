@@ -222,7 +222,7 @@ export default function Home() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-black text-white">Active Table #{activeOrder.table_number} Order</span>
                                         <span className="text-[10px] uppercase font-extrabold bg-[#1a1815] text-[#f5d796] border border-[#3b3226] px-2 py-0.5 rounded-full">
-                                            {activeOrder.status === 'pending' ? 'Pending' : activeOrder.status === 'preparing' ? 'Preparing' : 'Served'}
+                                            {activeOrder.status}
                                         </span>
                                     </div>
                                     <span className="text-[11px] text-amber-100 font-semibold block mt-0.5">
