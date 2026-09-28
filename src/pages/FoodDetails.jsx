@@ -5,6 +5,7 @@ import { useCart } from 'react-use-cart';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
+import { Sparkles, MessageSquare, Plus, Check } from 'lucide-react';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -15,6 +16,15 @@ const FoodDetails = () => {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [selectedPortion, setSelectedPortion] = useState(null);
+
+    // Customization State
+    const [ingredientOptions, setIngredientOptions] = useState({
+        Cheese: 'Normal',
+        Onion: 'Normal',
+        Spice: 'Normal',
+        Garlic: 'Normal'
+    });
+    const [specialInstruction, setSpecialInstruction] = useState('');
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -44,7 +54,7 @@ const FoodDetails = () => {
         );
     }
 
-    if (!foodData) return <div className="p-8 text-center text-gray-500">Food item not found</div>;
+    if (!foodData) return <div className="p-8 text-center text-gray-500 font-bold">Food item not found</div>;
 
     const portions = foodData.portions && foodData.portions.length > 0
         ? foodData.portions
@@ -54,31 +64,44 @@ const FoodDetails = () => {
     const basePrice = Number(foodData.basePrice || foodData.base_price || 0);
     const price = (basePrice * (portionObj?.multiplier || 1)).toFixed(2);
     const images = foodData.images && foodData.images.length > 0 ? foodData.images : ['/placeholderfood.png'];
-    const ingredients = foodData.ingredients || [];
+    const ingredients = foodData.ingredients || ['Cheese', 'Onion', 'Garlic', 'Herbs'];
     const allergens = foodData.allergens || [];
-    const tasteProfile = foodData.tasteProfile || foodData.taste_profile || [];
 
     const handleBack = () => {
         navigate(-1);
     };
 
-    const handleIncrease = () => {
-        setQuantity(prev => prev + 1);
-    };
-
-    const handleDecrease = () => {
-        setQuantity(prev => Math.max(1, prev - 1));
+    const handleIngredientChange = (name, level) => {
+        setIngredientOptions(prev => ({
+            ...prev,
+            [name]: level
+        }));
     };
 
     const handleAddToCart = () => {
+        // Filter out normal options to keep customizations clean
+        const activeCustomizations = {};
+        Object.entries(ingredientOptions).forEach(([key, val]) => {
+            if (val !== 'Normal') {
+                activeCustomizations[key] = val;
+            }
+        });
+
+        // Requirement Sec 30: Unique item ID ensures quantity-level customization differentiation
+        const customHash = JSON.stringify(activeCustomizations) + '_' + specialInstruction.trim();
+        const uniqueCartItemId = `${foodData.id}-${selectedPortion || 'reg'}-${customHash.replace(/[^a-zA-Z0-9]/g, '')}`;
+
         addItem(
             {
-                id: foodData.id + '-' + (selectedPortion || 'reg'),
+                id: uniqueCartItemId,
                 dish_id: foodData.id,
                 name: foodData.name,
                 price: Number(price),
                 image: images[0],
                 portion: portionObj.label,
+                customizations: activeCustomizations,
+                special_instruction: specialInstruction.trim(),
+                specialInstruction: specialInstruction.trim()
             },
             quantity
         );
@@ -86,152 +109,161 @@ const FoodDetails = () => {
     };
 
     return (
-        <>
-            <div
-                className="relative flex size-full min-h-screen flex-col bg-white justify-between group/design-root overflow-x-hidden"
-                style={{ fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif' }}
-            >
-                <div>
-                    <div className="flex items-center bg-white p-4 pb-2 justify-between">
-                        <div
-                            className="text-[#171312] flex size-12 shrink-0 items-center cursor-pointer"
-                            onClick={handleBack}
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24px"
-                                height="24px"
-                                fill="currentColor"
-                                viewBox="0 0 256 256"
-                            >
-                                <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
-                            </svg>
-                        </div>
-                        <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">
-                            INNBITE
-                        </h2>
-                    </div>
-
-                    {/* Image Carousel */}
-                    <div className="flex overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <div className="flex w-full">
-                            {images.map((img, idx) => (
-                                <div key={idx} className="flex-none w-full snap-center p-4">
-                                    <ImageWithSkeleton
-                                        src={img}
-                                        alt={foodData.name}
-                                        aspectRatio="aspect-square"
-                                        className="w-full max-h-72 rounded-2xl shadow-md border border-slate-100"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-1 pt-3">
-                        {foodData.name}
-                    </h1>
-                    <p className="text-[#e74c3c] text-xl font-bold leading-normal pb-3 px-4">
-                        ₹{price}
-                    </p>
-                    <p className="text-[#555] text-base font-normal leading-relaxed pb-3 px-4">
-                        {foodData.description}
-                    </p>
-
-                    {/* Portion Selectors */}
-                    {portions.length > 0 && (
-                        <div className="flex px-4 py-3">
-                            <div className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#f4f1f1] p-1">
-                                {portions.map((portion) => (
-                                    <label
-                                        key={portion.value}
-                                        className={`flex cursor-pointer h-full grow items-center justify-center rounded-full px-3 transition-all text-sm font-medium ${selectedPortion === portion.value ? 'bg-white shadow-sm text-[#171312] font-bold' : 'text-[#836c67]'}`}
-                                    >
-                                        <span className="truncate">{portion.label}</span>
-                                        <input
-                                            type="radio"
-                                            name="portion"
-                                            className="invisible w-0 hidden"
-                                            value={portion.value}
-                                            checked={selectedPortion === portion.value}
-                                            onChange={() => setSelectedPortion(portion.value)}
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Ingredients */}
-                    {ingredients.length > 0 && (
-                        <>
-                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
-                                Ingredients
-                            </h3>
-                            <div className="flex gap-2 px-4 py-2 overflow-x-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                                {ingredients.map((ingredient, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="inline-flex h-8 items-center rounded-full bg-[#f4f1f1] px-4 text-sm font-medium text-[#171312] whitespace-nowrap"
-                                    >
-                                        {ingredient}
-                                    </span>
-                                ))}
-                            </div>
-                        </>
-                    )}
-
-                    {/* Preparation */}
-                    {foodData.preparation && (
-                        <>
-                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-1 pt-4">
-                                Preparation
-                            </h3>
-                            <p className="text-[#555] text-sm font-normal leading-normal pb-3 px-4">
-                                {foodData.preparation}
-                            </p>
-                        </>
-                    )}
-
-                    {/* Allergens */}
-                    {allergens.length > 0 && (
-                        <div className="flex items-center gap-3 bg-[#fff5f5] text-[#c0392b] border border-[#fbd5d5] rounded-xl mx-4 my-2 p-3">
-                            <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09Z" />
-                            </svg>
-                            <p className="text-sm font-medium">Contains: {allergens.join(", ")}</p>
-                        </div>
-                    )}
-
-                    {/* Taste Profile */}
-                    {tasteProfile.length > 0 && (
-                        <div className="flex items-center gap-3 bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd] rounded-xl mx-4 my-2 p-3">
-                            <span className="text-lg">✨</span>
-                            <p className="text-sm font-medium">Taste Profile: {tasteProfile.join(", ")}</p>
-                        </div>
-                    )}
+        <div className="relative flex size-full min-h-screen flex-col bg-slate-50 justify-between font-sans pb-24">
+            <div>
+                {/* Header */}
+                <div className="flex items-center bg-white p-4 justify-between border-b border-slate-100 shadow-sm sticky top-0 z-20">
+                    <button
+                        onClick={handleBack}
+                        className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 hover:bg-slate-200 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2 className="text-slate-900 text-base font-extrabold tracking-tight">
+                        InnBite Menu
+                    </h2>
+                    <div className="w-10" />
                 </div>
 
-                {/* Bottom Action Bar */}
-                <div className="fixed bottom-0 left-0 right-0 border-t border-[#f4f1f1] bg-white px-4 py-3 flex items-center justify-between gap-4 z-20">
-                    <QuantityControl
-                        quantity={quantity}
-                        onIncrease={handleIncrease}
-                        onDecrease={handleDecrease}
-                    />
+                {/* Main Content Card */}
+                <div className="p-4 max-w-lg mx-auto space-y-6">
+                    {/* Image */}
+                    <div className="bg-white rounded-3xl p-3 shadow-sm border border-slate-200/80">
+                        <ImageWithSkeleton
+                            src={images[0]}
+                            alt={foodData.name}
+                            aspectRatio="aspect-square"
+                            className="w-full max-h-72 rounded-2xl object-cover shadow-inner"
+                        />
+                    </div>
+
+                    {/* Title & Price */}
+                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-2">
+                        <div className="flex items-start justify-between gap-4">
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                                {foodData.name}
+                            </h1>
+                            <span className="text-xl font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-xl border border-rose-100">
+                                ₹{price}
+                            </span>
+                        </div>
+                        <p className="text-slate-600 text-sm leading-relaxed pt-1 font-medium">
+                            {foodData.description}
+                        </p>
+                    </div>
+
+                    {/* Portions */}
+                    {portions.length > 0 && (
+                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                                Select Portion Size
+                            </h3>
+                            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
+                                {portions.map((portion) => (
+                                    <button
+                                        key={portion.value}
+                                        type="button"
+                                        onClick={() => setSelectedPortion(portion.value)}
+                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${selectedPortion === portion.value
+                                            ? 'bg-slate-900 text-white shadow-md'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {portion.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Customization Options (Req Sec 29) */}
+                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-amber-500" />
+                            <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                                Ingredient Customizations
+                            </h3>
+                        </div>
+
+                        {['Cheese', 'Onion', 'Spice', 'Garlic'].map((ing) => (
+                            <div key={ing} className="border-b border-slate-100 pb-3.5 last:border-0 last:pb-0">
+                                <span className="text-xs font-bold text-slate-700 block mb-2">{ing} Preference</span>
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
+                                        const label = lvl === 'No' ? `No ${ing}` : lvl;
+                                        const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
+                                        return (
+                                            <button
+                                                key={lvl}
+                                                type="button"
+                                                onClick={() => handleIngredientChange(ing, lvl)}
+                                                className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${isSelected
+                                                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                    }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Special Instructions */}
+                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">
+                        <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare className="w-4 h-4 text-indigo-500" />
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                Special Instructions
+                            </h3>
+                        </div>
+                        <textarea
+                            rows="2"
+                            placeholder="e.g. Less oil, extra crispy, no garlic..."
+                            value={specialInstruction}
+                            onChange={(e) => setSpecialInstruction(e.target.value)}
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all resize-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Add to Cart Floating Bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-2xl z-30">
+                <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-200">
+                        <button
+                            type="button"
+                            onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm"
+                        >
+                            -
+                        </button>
+                        <span className="font-extrabold text-sm text-slate-900 w-4 text-center">{quantity}</span>
+                        <button
+                            type="button"
+                            onClick={() => setQuantity(prev => prev + 1)}
+                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm"
+                        >
+                            +
+                        </button>
+                    </div>
+
                     <button
-                        className="flex-1 flex items-center justify-center gap-2 h-12 bg-[#171212] text-white rounded-full font-bold text-base hover:bg-black transition-colors"
+                        type="button"
                         onClick={handleAddToCart}
+                        className="flex-1 py-3.5 px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-slate-900/10 flex items-center justify-between transition-all"
                     >
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                            <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
-                        </svg>
-                        <span>Add to Cart · ₹{(price * quantity).toFixed(2)}</span>
+                        <span>Add to Order</span>
+                        <span>₹{(price * quantity).toFixed(2)}</span>
                     </button>
                 </div>
             </div>
-            <div className="pb-[84px]" />
-        </>
+        </div>
     );
 };
 
