@@ -1,82 +1,99 @@
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from 'react-use-cart';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import NetworkStatusBanner from './components/NetworkStatusBanner';
 
+// Eager load Home for 0ms initial page load
 import Home from './pages/Home';
-import Cart from './pages/Cart';
-import FoodDetails from './pages/FoodDetails';
-import CategoryDetails from './pages/CategoryDetails';
-import QRHandler from './pages/QRHandler';
 
-import KitchenView from './pages/kitchen/KitchenView';
-import WaiterLogin from './pages/waiter/WaiterLogin';
+// Lazy load secondary routes & admin/waiter portals for code splitting
+const Cart = lazy(() => import('./pages/Cart'));
+const FoodDetails = lazy(() => import('./pages/FoodDetails'));
+const CategoryDetails = lazy(() => import('./pages/CategoryDetails'));
+const QRHandler = lazy(() => import('./pages/QRHandler'));
 
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminDishes from './pages/admin/AdminDishes';
-import AdminCategories from './pages/admin/AdminCategories';
-import AdminBanners from './pages/admin/AdminBanners';
-import AdminTables from './pages/admin/AdminTables';
-import AdminWaiters from './pages/admin/AdminWaiters';
-import AdminOrders from './pages/admin/AdminOrders';
-import AdminLogin from './pages/admin/AdminLogin';
+const KitchenView = lazy(() => import('./pages/kitchen/KitchenView'));
+const WaiterLogin = lazy(() => import('./pages/waiter/WaiterLogin'));
+
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminDishes = lazy(() => import('./pages/admin/AdminDishes'));
+const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'));
+const AdminBanners = lazy(() => import('./pages/admin/AdminBanners'));
+const AdminTables = lazy(() => import('./pages/admin/AdminTables'));
+const AdminWaiters = lazy(() => import('./pages/admin/AdminWaiters'));
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+
+const PageLoadingFallback = () => (
+  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="text-center space-y-3">
+      <div className="w-10 h-10 border-3 border-[#114536] border-t-transparent rounded-full animate-spin mx-auto" />
+      <p className="text-xs font-bold text-slate-500">Loading InnBite...</p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <Routes>
-            {/* Customer QR Scan & Menu Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/table/:tableId" element={<QRHandler />} />
-            <Route path="/qr/common" element={<QRHandler />} />
-            <Route path="/qr/:qrCode" element={<QRHandler />} />
-            <Route path="/FoodDetails/:foodId" element={<FoodDetails />} />
-            <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
-            <Route path="/cart" element={<Cart />} />
+          <NetworkStatusBanner />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Routes>
+              {/* Customer QR Scan & Menu Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/table/:tableId" element={<QRHandler />} />
+              <Route path="/qr/common" element={<QRHandler />} />
+              <Route path="/qr/:qrCode" element={<QRHandler />} />
+              <Route path="/FoodDetails/:foodId" element={<FoodDetails />} />
+              <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
+              <Route path="/cart" element={<Cart />} />
 
-            {/* Waiter Application Routes (Authenticated) */}
-            <Route path="/waiter/login" element={<WaiterLogin />} />
-            <Route
-              path="/waiter"
-              element={
-                <ProtectedRoute requiredRole="WAITER">
-                  <KitchenView />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/kitchen"
-              element={
-                <ProtectedRoute requiredRole="WAITER">
-                  <KitchenView />
-                </ProtectedRoute>
-              }
-            />
+              {/* Waiter Application Routes (Authenticated) */}
+              <Route path="/waiter/login" element={<WaiterLogin />} />
+              <Route
+                path="/waiter"
+                element={
+                  <ProtectedRoute requiredRole="WAITER">
+                    <KitchenView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/kitchen"
+                element={
+                  <ProtectedRoute requiredRole="WAITER">
+                    <KitchenView />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin Portal Authentication */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+              {/* Admin Portal Authentication */}
+              <Route path="/admin/login" element={<AdminLogin />} />
 
-            {/* Admin Management Portal (Protected) */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="ADMIN">
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="dishes" element={<AdminDishes />} />
-              <Route path="categories" element={<AdminCategories />} />
-              <Route path="banners" element={<AdminBanners />} />
-              <Route path="tables" element={<AdminTables />} />
-              <Route path="waiters" element={<AdminWaiters />} />
-              <Route path="orders" element={<AdminOrders />} />
-            </Route>
-          </Routes>
+              {/* Admin Management Portal (Protected) */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="dishes" element={<AdminDishes />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="banners" element={<AdminBanners />} />
+                <Route path="tables" element={<AdminTables />} />
+                <Route path="waiters" element={<AdminWaiters />} />
+                <Route path="orders" element={<AdminOrders />} />
+              </Route>
+            </Routes>
+          </Suspense>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
