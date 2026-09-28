@@ -12,6 +12,7 @@ import {
     LogOut,
     ExternalLink
 } from 'lucide-react';
+import { APP_CONFIG } from '../../config';
 
 export default function AdminLayout() {
     const location = useLocation();
@@ -49,7 +50,7 @@ export default function AdminLayout() {
                             <img src="logo/innbite-logo.png" alt="" />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                                    InnBite <span className="text-[10px] uppercase font-bold bg-[#1b5d4b] text-emerald-200 px-1.5 py-0.5 rounded-md border border-[#267761]">Admin</span>
+                                    {APP_CONFIG.APP_NAME} <span className="text-[10px] uppercase font-bold bg-[#1b5d4b] text-emerald-200 px-1.5 py-0.5 rounded-md border border-[#267761]">Admin</span>
                                 </h1>
                                 <span className="text-[11px] text-emerald-200/80 font-medium">Management Portal</span>
                             </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, LogIn, AlertCircle, Sparkles } from 'lucide-react';
+import { APP_CONFIG } from '../../config';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function AdminLogin() {
                         <ShieldCheck className="w-7 h-7" />
                     </div>
                     <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                        InnBite <span className="text-[#114536]">Admin</span> Portal
+                        {APP_CONFIG.APP_NAME} <span className="text-[#114536]">Admin</span> Portal
                     </h1>
                     <p className="text-slate-500 text-xs mt-1.5 font-medium">
                         Enter authorized credentials to manage restaurant operations

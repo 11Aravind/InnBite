@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UtensilsCrossed, LogIn, AlertCircle } from 'lucide-react';
+import { APP_CONFIG } from '../../config';
 
 export default function WaiterLogin() {
     const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function WaiterLogin() {
                         <UtensilsCrossed className="w-7 h-7" />
                     </div>
                     <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                        InnBite <span className="text-[#114536]">Waiter</span> App
+                        {APP_CONFIG.APP_NAME} <span className="text-[#114536]">Waiter</span> App
                     </h1>
                     <p className="text-slate-500 text-xs mt-1.5 font-medium">
                         Log in with authorized staff credentials to receive live orders
