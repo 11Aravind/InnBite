@@ -131,205 +131,213 @@ const FoodDetails = () => {
     };
 
     return (
-        <div className="relative flex size-full min-h-screen flex-col bg-slate-50 justify-between font-sans pb-24">
+        <div className="relative flex size-full min-h-screen flex-col bg-white justify-between overflow-x-hidden font-sans">
             <div>
                 {/* Header */}
-                <div className="flex items-center bg-white p-4 justify-between border-b border-slate-100 shadow-sm sticky top-0 z-20">
-                    <button
+                <div className="flex items-center bg-white p-4 pb-2 justify-between sticky top-0 z-20">
+                    <div 
+                        className="text-[#171312] flex size-12 shrink-0 items-center cursor-pointer"
                         onClick={handleBack}
-                        className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 hover:bg-slate-200 transition-colors"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path>
                         </svg>
-                    </button>
-                    <h2 className="text-slate-900 text-base font-extrabold tracking-tight">
-                        InnBite Menu
+                    </div>
+                    <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+                        ORDERLY
                     </h2>
-                    <div className="w-10" />
+                    <div className="flex w-12 items-center justify-end">
+                        <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-[#171312] gap-2 text-base font-bold min-w-0 p-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M222.37,158.46l-47.11-21.11-.13-.06a16,16,0,0,0-15.17,1.4,8.12,8.12,0,0,0-.75.56L134.87,160c-15.42-7.49-31.34-23.29-38.83-38.51l20.78-24.71c.2-.25.39-.5.57-.77a16,16,0,0,0,1.32-15.06l0-.12L97.54,33.64a16,16,0,0,0-16.62-9.52A56.26,56.26,0,0,0,32,80c0,79.4,64.6,144,144,144a56.26,56.26,0,0,0,55.88-48.92A16,16,0,0,0,222.37,158.46ZM176,208A128.14,128.14,0,0,1,48,80,40.2,40.2,0,0,1,82.87,40a.61.61,0,0,0,0,.12l21,47L83.2,111.86a6.13,6.13,0,0,0-.57.77,16,16,0,0,0-1,15.7c9.06,18.53,27.73,37.06,46.46,46.11a16,16,0,0,0,15.75-1.14,8.44,8.44,0,0,0,.74-.56L168.89,152l47,21.05h0s.08,0,.11,0A40.21,40.21,0,0,1,176,208Z"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Main Content Card */}
-                <div className="p-4 max-w-lg mx-auto space-y-5">
-                    {/* Image */}
-                    <div className="bg-white rounded-3xl p-3 shadow-sm border border-slate-200/80">
-                        <ImageWithSkeleton
-                            src={images[0]}
-                            alt={foodData.name}
-                            aspectRatio="aspect-square"
-                            className="w-full max-h-72 rounded-2xl object-cover shadow-inner"
-                        />
+                {/* Image Carousel */}
+                <div className="flex overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex w-full">
+                        {images.map((img, idx) => (
+                            <div key={idx} className="flex-none w-full sm:w-1/2 md:w-1/3 snap-center p-2">
+                                <ImageWithSkeleton
+                                    src={img}
+                                    alt={`${foodData.name} ${idx + 1}`}
+                                    aspectRatio="aspect-[4/3]"
+                                    className="w-full bg-center bg-no-repeat bg-cover rounded-xl"
+                                />
+                            </div>
+                        ))}
                     </div>
-
-                    {/* Title & Price */}
-                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-2">
-                        <div className="flex items-start justify-between gap-4">
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                                {foodData.name}
-                            </h1>
-                            <span className="text-xl font-black text-[#114536] bg-[#114536]/10 px-3.5 py-1 rounded-xl border border-[#114536]/20">
-                                ₹{price}
-                            </span>
-                        </div>
-                        <p className="text-slate-600 text-sm leading-relaxed pt-1 font-medium">
-                            {foodData.description}
-                        </p>
+                </div>
+                {images.length > 1 && (
+                    <div className="flex justify-center gap-2 mt-4">
+                        {images.map((_, idx) => (
+                            <div key={idx} className="w-2 h-2 rounded-full bg-[#171312]/30"></div>
+                        ))}
                     </div>
+                )}
 
-                    {/* Preparation Section */}
-                    {foodData.preparation && (
-                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-2">
-                            <h3 className="text-base font-black text-slate-900 tracking-tight">
-                                Preparation
-                            </h3>
-                            <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                                {foodData.preparation}
-                            </p>
-                        </div>
-                    )}
+                {/* Title & Price */}
+                <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-0.5 pt-5">
+                    {foodData.name}
+                </h1>
+                <p className="text-[#f05a4a] text-lg font-bold leading-normal pb-3 pt-0 px-4">
+                    ₹{price}
+                </p>
+                <p className="text-[#171312] text-base font-normal leading-normal pb-3 pt-1 px-4">
+                    {foodData.description}
+                </p>
 
-                    {/* Contains: Allergens Warning Pill */}
-                    {allergensList.length > 0 && (
-                        <div className="bg-rose-50/90 border border-rose-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
-                            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                                <AlertTriangle className="w-4.5 h-4.5 stroke-[2.5]" />
-                            </div>
-                            <div className="text-sm leading-tight">
-                                <span className="font-extrabold text-rose-700">Contains: </span>
-                                <span className="font-semibold text-rose-600">{allergensList.join(', ')}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Taste Profile Sparkles Pill */}
-                    {tasteProfileList.length > 0 && (
-                        <div className="bg-emerald-50/90 border border-emerald-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-[#114536] flex items-center justify-center shrink-0">
-                                <Sparkles className="w-4.5 h-4.5 stroke-[2.5]" />
-                            </div>
-                            <div className="text-sm leading-tight">
-                                <span className="font-extrabold text-[#114536]">Taste Profile: </span>
-                                <span className="font-semibold text-emerald-800">{tasteProfileList.join(', ')}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Portions */}
-                    {portions.length > 0 && (
-                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                                Select Portion Size
-                            </h3>
-                            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-                                {portions.map((portion) => (
-                                    <button
+                {/* Portions */}
+                {portions.length > 0 && (
+                    <div className="flex px-4 py-3">
+                        <div className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#f4f1f1] p-1">
+                            {portions.map((portion) => {
+                                const isChecked = selectedPortion === portion.value;
+                                return (
+                                    <label
                                         key={portion.value}
-                                        type="button"
-                                        onClick={() => setSelectedPortion(portion.value)}
-                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${selectedPortion === portion.value
-                                            ? 'bg-[#114536] text-white shadow-md shadow-[#114536]/20'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                            }`}
+                                        className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 text-sm font-medium leading-normal transition-all ${isChecked ? 'bg-white shadow-[0_0_4px_rgba(0,0,0,0.1)] text-[#171312]' : 'text-[#836c67]'}`}
                                     >
-                                        {portion.label}
-                                    </button>
-                                ))}
-                            </div>
+                                        <span className="truncate">{portion.label}</span>
+                                        <input 
+                                            type="radio" 
+                                            name="portionSelection" 
+                                            className="invisible w-0" 
+                                            value={portion.value}
+                                            checked={isChecked}
+                                            onChange={() => setSelectedPortion(portion.value)}
+                                        />
+                                    </label>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Customization Options (Req Sec 29) */}
-                    {(() => {
-                        const customizableList = (foodData.ingredients && Array.isArray(foodData.ingredients) && foodData.ingredients.length > 0)
-                            ? foodData.ingredients
-                            : (typeof foodData.ingredients === 'string' && foodData.ingredients.trim())
-                                ? foodData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
-                                : [];
-
-                        return customizableList.length > 0 ? (
-                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                                    <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                                        Ingredient Customizations
-                                    </h3>
-                                </div>
-
-                                {customizableList.map((ing) => (
-                                    <div key={ing} className="border-b border-slate-100 pb-3.5 last:border-0 last:pb-0">
-                                        <span className="text-xs font-bold text-slate-700 block mb-2">{ing} Preference</span>
-                                        <div className="grid grid-cols-4 gap-1.5">
-                                            {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
-                                                const label = lvl === 'No' ? `No ${ing}` : lvl;
-                                                const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
-                                                return (
-                                                    <button
-                                                        key={lvl}
-                                                        type="button"
-                                                        onClick={() => handleIngredientChange(ing, lvl)}
-                                                        className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${isSelected
-                                                            ? 'bg-[#114536] text-white border-[#114536] shadow-sm'
-                                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                                                            }`}
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                {/* Ingredients */}
+                {ingredients.length > 0 && (
+                    <>
+                        <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Ingredients</h3>
+                        <div className="flex gap-3 p-3 overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="flex flex-nowrap">
+                                {ingredients.map((ing, idx) => (
+                                    <div key={idx} className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f4f1f1] px-4 mr-2">
+                                        <p className="text-[#171312] text-sm font-medium leading-normal whitespace-nowrap">{ing}</p>
                                     </div>
                                 ))}
                             </div>
-                        ) : null;
-                    })()}
-
-                    {/* Special Instructions */}
-                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">
-                        <div className="flex items-center gap-2 mb-2">
-                            <MessageSquare className="w-4 h-4 text-[#114536]" />
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                Special Instructions
-                            </h3>
                         </div>
-                        <textarea
-                            rows="2"
-                            placeholder="e.g. Less oil, extra crispy, no garlic..."
-                            value={specialInstruction}
-                            onChange={(e) => setSpecialInstruction(e.target.value)}
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-[#114536] transition-all resize-none"
-                        />
+                    </>
+                )}
+
+                {/* Preparation */}
+                {foodData.preparation && (
+                    <>
+                        <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Preparation</h3>
+                        <p className="text-[#171312] text-base font-normal leading-normal pb-3 pt-1 px-4">
+                            {foodData.preparation}
+                        </p>
+                    </>
+                )}
+
+                {/* Allergens */}
+                {allergensList.length > 0 && (
+                    <div className="flex items-center gap-4 bg-white px-4 min-h-14 mt-2">
+                        <div className="text-rose-600 flex items-center justify-center rounded-lg bg-rose-100 shrink-0 size-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"></path>
+                            </svg>
+                        </div>
+                        <p className="text-[#171312] text-base font-normal leading-normal flex-1 truncate">
+                            Contains: {allergensList.join(', ')}
+                        </p>
                     </div>
+                )}
+
+                {/* Taste Profile */}
+                {tasteProfileList.length > 0 && (
+                    <div className="flex items-center gap-4 bg-white px-4 min-h-14">
+                        <div className="text-emerald-700 flex items-center justify-center rounded-lg bg-emerald-100 shrink-0 size-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z"></path>
+                            </svg>
+                        </div>
+                        <p className="text-[#171312] text-base font-normal leading-normal flex-1 truncate">
+                            Taste Profile: {tasteProfileList.join(', ')}
+                        </p>
+                    </div>
+                )}
+
+                {/* Customizations */}
+                {(() => {
+                    const customizableList = ingredients;
+                    return customizableList.length > 0 ? (
+                        <div className="px-4 py-4 space-y-4">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">Ingredient Customizations</h3>
+                            {customizableList.map((ing) => (
+                                <div key={ing} className="border-b border-[#f4f1f1] pb-3 last:border-0 last:pb-0">
+                                    <span className="text-sm font-medium text-[#171312] block mb-2">{ing} Preference</span>
+                                    <div className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#f4f1f1] p-1">
+                                        {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
+                                            const label = lvl === 'No' ? `No ${ing}` : lvl;
+                                            const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
+                                            return (
+                                                <label
+                                                    key={lvl}
+                                                    className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 text-xs font-medium leading-normal transition-all ${isSelected ? 'bg-white shadow-[0_0_4px_rgba(0,0,0,0.1)] text-[#171312]' : 'text-[#836c67]'}`}
+                                                >
+                                                    <span className="truncate">{label}</span>
+                                                    <input 
+                                                        type="radio"
+                                                        className="invisible w-0" 
+                                                        value={lvl}
+                                                        checked={isSelected}
+                                                        onChange={() => handleIngredientChange(ing, lvl)}
+                                                    />
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null;
+                })()}
+
+                {/* Special Instructions */}
+                <div className="px-4 py-4">
+                    <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] pb-2">Special Instructions</h3>
+                    <textarea
+                        rows="2"
+                        placeholder="e.g. Less oil, extra crispy..."
+                        value={specialInstruction}
+                        onChange={(e) => setSpecialInstruction(e.target.value)}
+                        className="w-full p-3 bg-[#f4f1f1] border-none rounded-xl text-sm font-medium text-[#171312] outline-none focus:ring-2 focus:ring-slate-300 transition-all resize-none placeholder:text-[#836c67]"
+                    />
                 </div>
+                
+                <div className="pb-[84px]"></div>
             </div>
 
             {/* Bottom Add to Cart Floating Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-2xl z-30">
-                <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-200">
-                        <button
-                            type="button"
-                            onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm hover:bg-slate-50"
-                        >
-                            -
-                        </button>
-                        <span className="font-extrabold text-sm text-slate-900 w-4 text-center">{quantity}</span>
-                        <button
-                            type="button"
-                            onClick={() => setQuantity(prev => prev + 1)}
-                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm hover:bg-slate-50"
-                        >
-                            +
-                        </button>
+            <div className="flex justify-stretch fixed rounded-t-lg bottom-0 left-0 right-0 bg-white shadow-[0_-2px_6px_-1px_rgba(0,0,0,0.1)] z-30">
+                <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between max-w-lg mx-auto w-full">
+                    <div className="flex min-w-[84px] items-center justify-between rounded-full h-12 px-2 bg-[#f4f1f1] text-[#171312]">
+                        <button type="button" onClick={() => setQuantity(prev => Math.max(1, prev - 1))} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer">-</button>
+                        <span className="font-bold text-base w-4 text-center">{quantity}</span>
+                        <button type="button" onClick={() => setQuantity(prev => prev + 1)} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer">+</button>
                     </div>
-
                     <button
                         type="button"
                         onClick={handleAddToCart}
-                        className="flex-1 py-3.5 px-6 bg-[#114536] hover:bg-[#0d372b] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-[#114536]/20 flex items-center justify-between transition-all active:scale-[0.99]"
+                        className="flex flex-1 max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#edc3ba] text-[#171312] text-base font-bold leading-normal tracking-[0.015em] gap-2 active:scale-95 transition-transform"
                     >
-                        <span>Add to Order</span>
-                        <span>₹{(price * quantity).toFixed(2)}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
+                        </svg>
+                        <span className="truncate">Add Item</span>
                     </button>
                 </div>
             </div>

@@ -7,25 +7,25 @@ export default function CategoryCard({ id, image, name }) {
 
     return (
         <div
-            className="flex items-center gap-4 bg-white px-4 py-2.5 hover:bg-slate-50 min-h-14 justify-between cursor-pointer rounded-xl border border-transparent hover:border-slate-100 transition-all mb-1"
+            className="flex items-center gap-4 bg-white px-4 min-h-14 justify-between cursor-pointer hover:bg-slate-50 transition-colors"
             onClick={() => navigate(`/CategoryDetails/${id}`)}
         >
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-4">
                 <ImageWithSkeleton
                     src={image}
                     alt={name}
                     aspectRatio="aspect-square"
-                    className="w-11 h-11 rounded-xl shadow-2xs border border-slate-100 shrink-0"
+                    className="bg-center bg-no-repeat bg-cover rounded-lg size-10"
                 />
-                <p className="text-slate-900 text-sm font-bold leading-tight flex-1 truncate">
+                <p className="text-[#171212] text-base font-normal leading-normal flex-1 truncate">
                     {name}
                 </p>
             </div>
-            <div className="shrink-0 text-slate-400">
+            <div className="shrink-0 text-[#171212] flex size-7 items-center justify-center">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
+                    width="24px"
+                    height="24px"
                     fill="currentColor"
                     viewBox="0 0 256 256"
                 >

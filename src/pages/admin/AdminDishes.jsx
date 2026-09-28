@@ -41,7 +41,7 @@ export default function AdminDishes() {
     const handleStartEditPortion = (idx, portion) => {
         setEditingPortionIdx(idx);
         setEditPortionLabel(portion.label);
-        setEditPortionPrice(String(portion.price || (Number(formData.basePrice) * (portion.multiplier || 1)).toFixed(2) || '0'));
+        setEditPortionPrice(String(portion.price !== undefined ? portion.price : (Number(formData.basePrice) * (portion.multiplier || 1)).toFixed(2) || '0'));
     };
 
     const handleSaveEditPortion = (idx) => {
@@ -556,13 +556,9 @@ export default function AdminDishes() {
                                                     key={idx}
                                                     className="bg-emerald-50/70 border border-[#114536]/40 shadow-xs rounded-xl p-1.5 flex items-center gap-1.5 text-xs font-bold animate-fade-in"
                                                 >
-                                                    <input
-                                                        type="text"
-                                                        value={editPortionLabel}
-                                                        onChange={(e) => setEditPortionLabel(e.target.value)}
-                                                        placeholder="Portion Label"
-                                                        className="w-24 h-7 bg-white border border-slate-300 px-2 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
-                                                    />
+                                                    <span className="text-[#114536] font-extrabold px-1 truncate max-w-[100px]" title={editPortionLabel}>
+                                                        {editPortionLabel}
+                                                    </span>
                                                     <div className="flex items-center gap-0.5">
                                                         <input
                                                             type="number"
@@ -570,12 +566,9 @@ export default function AdminDishes() {
                                                             value={editPortionPrice}
                                                             onChange={(e) => setEditPortionPrice(e.target.value)}
                                                             placeholder="Price"
-                                                            className="w-16 h-7 bg-white border border-slate-300 px-1.5 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
+                                                            className="w-20 h-7 bg-white border border-slate-300 px-2 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
                                                         />
                                                     </div>
-                                                    <span className="text-[#114536] text-[11px] font-black bg-white px-1.5 py-0.5 rounded-md border border-emerald-200">
-                                                        ₹{Number(editPortionPrice || 0).toFixed(2)}
-                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleSaveEditPortion(idx)}
@@ -639,13 +632,12 @@ export default function AdminDishes() {
                                             onChange={(e) => setSelectedPresetPortion(e.target.value)}
                                             className="w-48 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-bold outline-none focus:border-[#114536]"
                                         >
-                                            <option value="Regular">Regular</option>
-                                            <option value="Large">Large</option>
-                                            <option value="Small">Small</option>
-                                            <option value="Half">Half</option>
-                                            <option value="Full">Full</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="Family Pack">Family Pack</option>
+                                            {['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack']
+                                                .filter(label => !formData.portions?.some(p => p.label.toLowerCase() === label.toLowerCase()))
+                                                .map(label => (
+                                                    <option key={label} value={label}>{label}</option>
+                                                ))
+                                            }
                                             <option value="Other">Other (Custom Size)...</option>
                                         </select>
 
@@ -673,6 +665,11 @@ export default function AdminDishes() {
                                             onClick={() => {
                                                 const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
                                                 if (!finalLabel) return;
+                                                
+                                                if (formData.portions?.some(p => p.label.toLowerCase() === finalLabel.toLowerCase())) {
+                                                    toast.error(`"${finalLabel}" size already exists!`);
+                                                    return;
+                                                }
 
                                                 let defaultPrice = Number(portionPrice) || Number(formData.basePrice) || 0;
 

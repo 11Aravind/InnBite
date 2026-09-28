@@ -286,16 +286,16 @@ export default function Home() {
                                     banners.map((banner) => (
                                         <div
                                             key={banner.id}
-                                            className="flex h-full flex-1 flex-col gap-2 rounded-2xl min-w-[280px] sm:min-w-[320px] snap-start cursor-pointer group"
+                                            className="flex h-full w-[280px] sm:w-[320px] shrink-0 flex-col gap-4 rounded-lg snap-start cursor-pointer"
                                             onClick={() => banner.dish_id && navigate(`/FoodDetails/${banner.dish_id}`)}
                                         >
                                             <ImageWithSkeleton
                                                 src={banner.image_url}
                                                 alt={banner.title}
                                                 aspectRatio="aspect-video"
-                                                className="w-full rounded-2xl shadow-sm border border-slate-100 group-hover:shadow-md transition-shadow"
+                                                className="w-full bg-center bg-no-repeat bg-cover rounded-xl flex flex-col"
                                             />
-                                            <p className="text-slate-900 text-sm font-bold leading-tight px-1">
+                                            <p className="text-[#171212] text-base font-medium leading-normal">
                                                 {banner.title}
                                             </p>
                                         </div>

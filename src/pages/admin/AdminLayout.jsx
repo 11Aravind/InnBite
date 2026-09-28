@@ -23,9 +23,9 @@ export default function AdminLayout() {
         { path: '/admin/orders', label: 'Orders', icon: Receipt },
         { path: '/admin/dishes', label: 'Menu', icon: Utensils },
         { path: '/admin/categories', label: 'Categories', icon: FolderKanban },
+        { path: '/admin/waiters', label: 'Waiters', icon: Users },
+        { path: '/admin/banners', label: 'Banners', icon: ImageIcon },
         { path: '/admin/tables', label: 'Tables', icon: QrCode },
-        { path: '/admin/waiters', label: 'Waiters & Staff', icon: Users },
-        { path: '/admin/banners', label: 'Promos & Banners', icon: ImageIcon },
     ];
 
     const isActive = (item) => {

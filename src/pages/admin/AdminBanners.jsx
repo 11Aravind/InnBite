@@ -56,17 +56,29 @@ export default function AdminBanners() {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        await apiService.saveBanner({
-            id: editingBanner?.id,
-            title,
-            image_url: imageUrl,
-            dish_id: dishId || null
-        });
-        setIsModalOpen(false);
-        setTitle('');
-        setImageUrl('');
-        setDishId('');
-        loadData();
+
+        if (!imageUrl) {
+            toast.error('Please upload a banner image');
+            return;
+        }
+
+        try {
+            await apiService.saveBanner({
+                id: editingBanner?.id,
+                title,
+                image_url: imageUrl,
+                dish_id: dishId || null
+            });
+            toast.success(`Banner "${title}" saved successfully!`);
+            setIsModalOpen(false);
+            setTitle('');
+            setImageUrl('');
+            setDishId('');
+            loadData();
+        } catch (err) {
+            console.error('Save banner error:', err);
+            toast.error(err.message || 'Failed to save banner.');
+        }
     };
 
     // Delete Modal State
@@ -124,16 +136,16 @@ export default function AdminBanners() {
         },
         {
             accessorKey: 'dish_id',
-            header: 'Linked Dish Target',
+            header: 'Link Target URL',
             cell: ({ row }) => {
                 const b = row.original;
                 return b.dish_id ? (
-                    <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 font-bold text-xs inline-flex items-center gap-1.5">
-                        <LinkIcon className="w-3.5 h-3.5 text-amber-600" />
-                        {getLinkedDishName(b.dish_id)}
+                    <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 font-bold text-xs inline-flex items-center gap-1.5 truncate max-w-[200px]" title={b.dish_id}>
+                        <LinkIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">{b.dish_id}</span>
                     </span>
                 ) : (
-                    <span className="text-slate-400 italic">No linked dish</span>
+                    <span className="text-slate-400 italic">No link</span>
                 );
             }
         },
@@ -231,17 +243,14 @@ export default function AdminBanners() {
                                 aspect={16 / 9}
                             />
                             <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Link to Dish (Optional)</label>
-                                <select
+                                <label className="text-xs font-bold text-slate-700 block mb-1">Link URL (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="https://example.com/some-page"
                                     value={dishId}
                                     onChange={(e) => setDishId(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-bold"
-                                >
-                                    <option value="">-- No link --</option>
-                                    {dishes.map((d) => (
-                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                </select>
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
+                                />
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>

@@ -7,18 +7,19 @@ export default function FoodCard({ image, name, price, id }) {
 
     return (
         <div
-            className="flex h-full flex-1 flex-col gap-2.5 rounded-2xl min-w-[150px] sm:min-w-[170px] cursor-pointer group hover:scale-[1.02] transition-all"
+            className="flex h-full w-40 shrink-0 flex-col gap-4 rounded-lg cursor-pointer group hover:scale-[1.02] transition-transform"
             onClick={() => navigate(`/FoodDetails/${id}`)}
         >
             <ImageWithSkeleton
                 src={image}
                 alt={name}
                 aspectRatio="aspect-square"
-                className="rounded-2xl shadow-2xs border border-slate-100 group-hover:shadow-md transition-shadow"
+                className="w-full bg-center bg-no-repeat bg-cover rounded-xl flex flex-col"
             />
-            <div className="px-0.5">
-                <p className="text-slate-900 text-sm font-bold leading-tight line-clamp-1 group-hover:text-black">{name}</p>
-                <p className="text-slate-600 text-xs font-extrabold leading-normal mt-0.5">₹{Number(price || 0).toFixed(2)}</p>
+            <div>
+                <p className="text-[#171212] text-base font-medium leading-normal line-clamp-1">{name}</p>
+                <p className="text-[#82686a] text-sm font-normal leading-normal">₹{Number(price || 0).toFixed(2)}</p>
+
             </div>
         </div>
     );
