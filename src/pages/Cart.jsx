@@ -7,6 +7,7 @@ import { getOrCreateCustomerSession } from '../utils/session';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle } from 'lucide-react';
+import { secureStorage } from '../utils/secureStorage';
 
 export default function Cart() {
     const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function Cart() {
 
     const [settings, setSettings] = useState(null);
     const [tableNumber, setTableNumber] = useState(() => {
-        return session.table_number || localStorage.getItem('orderly_table_number') || '1';
+        return session.table_number || secureStorage.getItem('orderly_table_number') || '1';
     });
 
     const [customerName, setCustomerName] = useState('');
@@ -45,13 +46,13 @@ export default function Cart() {
     const handleTableChange = (e) => {
         const val = e.target.value;
         setTableNumber(val);
-        localStorage.setItem('orderly_table_number', val);
+        secureStorage.setItem('orderly_table_number', val);
     };
 
     const handleSaveOrderState = (orderData) => {
         setOrderPlaced(orderData);
         try {
-            localStorage.setItem('orderly_active_order', JSON.stringify(orderData));
+            secureStorage.setItem('orderly_active_order', orderData);
         } catch (e) {
             console.error('Error saving active order:', e);
         }
@@ -135,7 +136,7 @@ export default function Cart() {
     }
 
     return (
-        <div className="container relative flex size-full min-h-screen flex-col bg-white justify-between overflow-x-hidden max-w-lg mx-auto font-sans">
+        <div className="container relative flex size-full min-h-screen flex-col bg-white justify-between max-w-lg mx-auto font-sans">
             <div>
                 {/* Header */}
                 <div className="flex items-center bg-white p-4 pb-2 justify-between sticky top-0 z-20">

@@ -1,5 +1,6 @@
 // Session management for customer guest ordering
 // Enforces: QR, Table, Customer Session, Cart, and Order are distinct entities!
+import { secureStorage } from './secureStorage';
 
 const SESSION_KEY = 'orderly_customer_session';
 
@@ -10,10 +11,7 @@ const getEnvServiceMode = () => {
 export const getOrCreateCustomerSession = () => {
     let session = null;
     try {
-        const raw = sessionStorage.getItem(SESSION_KEY);
-        if (raw) {
-            session = JSON.parse(raw);
-        }
+        session = secureStorage.getSessionItem(SESSION_KEY);
     } catch (e) {
         console.error('Failed to parse customer session:', e);
     }
@@ -37,7 +35,7 @@ export const getOrCreateCustomerSession = () => {
 
 export const saveCustomerSession = (session) => {
     try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        secureStorage.setSessionItem(SESSION_KEY, session);
     } catch (e) {
         console.error('Failed to save customer session:', e);
     }
@@ -72,7 +70,7 @@ export const setActiveOrderInSession = (orderId) => {
 
 export const clearCustomerSession = () => {
     try {
-        sessionStorage.removeItem(SESSION_KEY);
+        secureStorage.removeSessionItem(SESSION_KEY);
     } catch (e) {
         console.error('Failed to clear customer session:', e);
     }

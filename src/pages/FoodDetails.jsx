@@ -132,7 +132,7 @@ const FoodDetails = () => {
     };
 
     return (
-        <div className="relative flex size-full min-h-screen flex-col bg-white justify-between overflow-x-hidden font-sans">
+        <div className="relative flex size-full min-h-screen flex-col bg-white justify-between font-sans">
             <div>
                 {/* Header */}
                 <div className="flex items-center bg-white p-4 pb-2 justify-between sticky top-0 z-20">

@@ -2,54 +2,56 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { ChefHat, Check, Clock, CreditCard, X, RefreshCw, Sparkles, UtensilsCrossed, FileText, MessageSquare } from 'lucide-react';
+import { secureStorage } from '../utils/secureStorage';
+import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
 
-export default function CustomerOrderDetailsModal({ order: initialOrder, onClose, onOrderMore }) {
+export default function CustomerOrderDetailsModal({ order: initialOrder, onClose, onOrderMore, disableSubscription = false }) {
     const [order, setOrder] = useState(initialOrder);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    useEffect(() => {
+        if (disableSubscription) {
+            setOrder(initialOrder);
+        }
+    }, [initialOrder, disableSubscription]);
 
     const refreshOrderStatus = async () => {
         if (!order?.id) return;
         setIsRefreshing(true);
-        const allOrders = await apiService.getOrders();
-        const updated = allOrders.find(o => o.id === order.id || o.order_number === order.order_number);
-        if (updated) {
-            if (updated.status === 'SERVED' || updated.status === 'completed' || updated.status === 'CANCELLED') {
-                localStorage.removeItem('orderly_active_order');
-                onClose();
-            } else {
-                setOrder(updated);
-                localStorage.setItem('orderly_active_order', JSON.stringify(updated));
-            }
-        } else {
-            // Order was removed from database
-            localStorage.removeItem('orderly_active_order');
+        const updated = await syncActiveOrderWithServer(order);
+        if (!updated) {
             onClose();
+        } else {
+            setOrder(updated);
         }
         setIsRefreshing(false);
     };
 
     useEffect(() => {
-        refreshOrderStatus();
+        if (!disableSubscription) {
+            refreshOrderStatus();
+        }
 
         const interval = setInterval(() => {
-            refreshOrderStatus();
+            if (!disableSubscription) {
+                refreshOrderStatus();
+            }
         }, 3000);
 
         let subscription;
-        if (isSupabaseConfigured && supabase && order?.id) {
+        if (!disableSubscription && isSupabaseConfigured && supabase && order?.id) {
             subscription = supabase
                 .channel(`order_track_${order.id}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
                     if (payload.eventType === 'DELETE' && (payload.old?.id === order.id)) {
-                        localStorage.removeItem('orderly_active_order');
+                        secureStorage.removeItem('orderly_active_order');
                         onClose();
                     } else if (payload.eventType === 'UPDATE' && payload.new?.id === order.id) {
-                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
-                            localStorage.removeItem('orderly_active_order');
+                        const updated = handleOrderRealtimeUpdate(order, payload.new);
+                        if (!updated) {
                             onClose();
                         } else {
-                            setOrder(prev => ({ ...prev, ...payload.new }));
-                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...order, ...payload.new }));
+                            setOrder(updated);
                         }
                     }
                 })

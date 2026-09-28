@@ -11,8 +11,10 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
+import { secureStorage } from '../utils/secureStorage';
 import { APP_CONFIG } from '../config';
 import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
+import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -28,10 +30,10 @@ export default function Home() {
     const [tableNumber, setTableNumber] = useState(() => {
         const urlTable = searchParams.get('table');
         if (urlTable) {
-            localStorage.setItem('orderly_table_number', urlTable);
+            secureStorage.setItem('orderly_table_number', urlTable);
             return urlTable;
         }
-        return localStorage.getItem('orderly_table_number') || '1';
+        return secureStorage.getItem('orderly_table_number') || '1';
     });
 
     // API Data state
@@ -41,25 +43,20 @@ export default function Home() {
 
     const validateActiveOrder = async (orderToCheck) => {
         if (!orderToCheck || !orderToCheck.id) return;
-        const allOrders = await apiService.getOrders();
-        const found = allOrders.find(o => o.id === orderToCheck.id || o.order_number === orderToCheck.order_number);
-
-        if (!found || found.status === 'SERVED' || found.status === 'completed' || found.status === 'CANCELLED') {
-            localStorage.removeItem('orderly_active_order');
+        const updated = await syncActiveOrderWithServer(orderToCheck);
+        if (!updated) {
             setActiveOrder(null);
         } else {
-            setActiveOrder(found);
-            localStorage.setItem('orderly_active_order', JSON.stringify(found));
+            setActiveOrder(updated);
         }
     };
 
     useEffect(() => {
-        const storedOrder = localStorage.getItem('orderly_active_order');
+        const storedOrder = secureStorage.getItem('orderly_active_order');
         if (storedOrder) {
             try {
-                const parsed = JSON.parse(storedOrder);
-                if (parsed && parsed.id) {
-                    validateActiveOrder(parsed);
+                if (storedOrder && storedOrder.id) {
+                    validateActiveOrder(storedOrder);
                 }
             } catch (e) {
                 console.error('Error parsing stored active order:', e);
@@ -74,17 +71,16 @@ export default function Home() {
                 .channel(`home_order_track_${activeOrder.id}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
                     if (payload.eventType === 'DELETE' && (payload.old?.id === activeOrder.id)) {
-                        localStorage.removeItem('orderly_active_order');
+                        secureStorage.removeItem('orderly_active_order');
                         setActiveOrder(null);
                         setShowOrderModal(false);
                     } else if (payload.eventType === 'UPDATE' && payload.new?.id === activeOrder.id) {
-                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
-                            localStorage.removeItem('orderly_active_order');
+                        const updated = handleOrderRealtimeUpdate(activeOrder, payload.new);
+                        if (!updated) {
                             setActiveOrder(null);
                             setShowOrderModal(false);
                         } else {
-                            setActiveOrder(prev => ({ ...prev, ...payload.new }));
-                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...activeOrder, ...payload.new }));
+                            setActiveOrder(updated);
                         }
                     }
                 })
@@ -99,7 +95,7 @@ export default function Home() {
     useEffect(() => {
         const tableFromUrl = searchParams.get('table');
         if (tableFromUrl) {
-            localStorage.setItem('orderly_table_number', tableFromUrl);
+            secureStorage.setItem('orderly_table_number', tableFromUrl);
             setTableNumber(tableFromUrl);
         }
     }, [searchParams]);
@@ -170,6 +166,7 @@ export default function Home() {
                     order={activeOrder}
                     onClose={() => setShowOrderModal(false)}
                     onOrderMore={() => setShowOrderModal(false)}
+                    disableSubscription={true}
                 />
             )}
 

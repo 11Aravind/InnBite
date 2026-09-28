@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiService } from '../utils/apiService';
 import { updateCustomerSessionTable } from '../utils/session';
 import { QrCode, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { secureStorage } from '../utils/secureStorage';
 
 export default function QRHandler() {
     const { qrCode, tableId } = useParams();
@@ -35,7 +36,7 @@ export default function QRHandler() {
                         res.type || 'TABLE_SERVICE'
                     );
                     if (res.table_number) {
-                        localStorage.setItem('orderly_table_number', String(res.table_number));
+                        secureStorage.setItem('orderly_table_number', String(res.table_number));
                     }
                     // Redirect to Customer Menu
                     setTimeout(() => {

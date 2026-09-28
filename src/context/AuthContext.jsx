@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../utils/apiService';
+import { secureStorage } from '../utils/secureStorage';
 
 const AuthContext = createContext(null);
 
@@ -8,8 +9,7 @@ const AUTH_STORAGE_KEY = 'orderly_auth_session';
 export const AuthProvider = ({ children }) => {
     const [authSession, setAuthSession] = useState(() => {
         try {
-            const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-            return stored ? JSON.parse(stored) : null;
+            return secureStorage.getItem(AUTH_STORAGE_KEY);
         } catch {
             return null;
         }
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
 
             if (res.success && res.session) {
                 setAuthSession(res.session);
-                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.session));
+                secureStorage.setItem(AUTH_STORAGE_KEY, res.session);
                 return { success: true, session: res.session };
             } else {
                 return { success: false, error: res.error || 'Authentication failed.' };
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         setAuthSession(null);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
+        secureStorage.removeItem(AUTH_STORAGE_KEY);
     };
 
     const isAuthenticated = !!authSession?.token;
