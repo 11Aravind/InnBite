@@ -5,13 +5,13 @@ import { useCart } from 'react-use-cart';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
-import { Sparkles, MessageSquare, Plus, Check, AlertTriangle } from 'lucide-react';
+import { Sparkles, MessageSquare, Plus, Check, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
     const { foodId } = useParams();
-    const { addItem } = useCart();
+    const { addItem, totalUniqueItems } = useCart();
 
     const [foodData, setFoodData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -146,11 +146,22 @@ const FoodDetails = () => {
                     <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
                         ORDERLY
                     </h2>
-                    <div className="flex w-12 items-center justify-end">
-                        <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-[#171312] gap-2 text-base font-bold min-w-0 p-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                    <div className="flex items-center gap-3">
+                        <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-[#171312] transition-transform active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22px" height="22px" fill="currentColor" viewBox="0 0 256 256">
                                 <path d="M222.37,158.46l-47.11-21.11-.13-.06a16,16,0,0,0-15.17,1.4,8.12,8.12,0,0,0-.75.56L134.87,160c-15.42-7.49-31.34-23.29-38.83-38.51l20.78-24.71c.2-.25.39-.5.57-.77a16,16,0,0,0,1.32-15.06l0-.12L97.54,33.64a16,16,0,0,0-16.62-9.52A56.26,56.26,0,0,0,32,80c0,79.4,64.6,144,144,144a56.26,56.26,0,0,0,55.88-48.92A16,16,0,0,0,222.37,158.46ZM176,208A128.14,128.14,0,0,1,48,80,40.2,40.2,0,0,1,82.87,40a.61.61,0,0,0,0,.12l21,47L83.2,111.86a6.13,6.13,0,0,0-.57.77,16,16,0,0,0-1,15.7c9.06,18.53,27.73,37.06,46.46,46.11a16,16,0,0,0,15.75-1.14,8.44,8.44,0,0,0,.74-.56L168.89,152l47,21.05h0s.08,0,.11,0A40.21,40.21,0,0,1,176,208Z"></path>
                             </svg>
+                        </button>
+                        <button 
+                            onClick={() => navigate('/cart')}
+                            className="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-[#f4f1f1] text-[#171312] transition-transform active:scale-95"
+                        >
+                            <ShoppingCart className="w-5 h-5" />
+                            {totalUniqueItems > 0 && (
+                                <span className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#f05a4a] text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                                    {totalUniqueItems}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>
