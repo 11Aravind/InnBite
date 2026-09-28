@@ -139,13 +139,13 @@ export default function AdminCategories() {
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        Food Categories <FolderKanban className="w-5 h-5 text-rose-500" />
+                        Food Categories <FolderKanban className="w-5 h-5 text-themePrimary" />
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Manage food menu categories powered by TanStack Table</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Category</span>
@@ -182,7 +182,7 @@ export default function AdminCategories() {
                                     required
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-medium"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
                                 />
                             </div>
                             <ImageFileInput
@@ -197,12 +197,12 @@ export default function AdminCategories() {
                                     rows="2"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500"
+                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary"
                                 />
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-500/20">Save Category</button>
+                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Category</button>
                             </div>
                         </form>
                     </div>

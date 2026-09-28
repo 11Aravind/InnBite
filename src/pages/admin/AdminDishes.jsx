@@ -325,13 +325,13 @@ export default function AdminDishes() {
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        Dishes & Menu Management <Utensils className="w-5 h-5 text-rose-500" />
+                        Dishes & Menu Management <Utensils className="w-5 h-5 text-themePrimary" />
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Manage menu catalog in structured TanStack Table format with live search and sorting</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Dish</span>
@@ -491,7 +491,7 @@ export default function AdminDishes() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-rose-500/20"
+                                    className="w-1/2 h-11 btn-primary text-sm"
                                 >
                                     Save Dish
                                 </button>

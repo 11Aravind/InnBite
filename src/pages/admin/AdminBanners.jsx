@@ -154,13 +154,13 @@ export default function AdminBanners() {
             <div className="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                        Promotional Banners <ImageIcon className="w-5 h-5 text-rose-500" />
+                        Promotional Banners <ImageIcon className="w-5 h-5 text-themePrimary" />
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Manage promotional carousel banners powered by TanStack Table</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-rose-500/20 inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
+                    className="px-6 py-3 btn-primary text-xs shrink-0 cursor-pointer"
                 >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Add New Banner</span>
@@ -197,7 +197,7 @@ export default function AdminBanners() {
                                     required
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-medium"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
                                 />
                             </div>
                             <ImageFileInput
@@ -211,7 +211,7 @@ export default function AdminBanners() {
                                 <select
                                     value={dishId}
                                     onChange={(e) => setDishId(e.target.value)}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-rose-500 font-bold"
+                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-bold"
                                 >
                                     <option value="">-- No link --</option>
                                     {dishes.map((d) => (
@@ -221,7 +221,7 @@ export default function AdminBanners() {
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-500/20">Save Banner</button>
+                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Banner</button>
                             </div>
                         </form>
                     </div>
