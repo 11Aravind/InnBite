@@ -105,10 +105,6 @@ export default function AdminLogin() {
                         )}
                     </button>
                 </form>
-
-                <div className="mt-6 text-center text-[11px] text-slate-500 font-medium">
-                    Demo Credentials: <span className="font-bold text-slate-800">admin / adminpassword</span>
-                </div>
             </div>
         </div>
     );

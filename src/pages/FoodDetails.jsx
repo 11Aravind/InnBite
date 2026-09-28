@@ -19,12 +19,7 @@ const FoodDetails = () => {
     const [selectedPortion, setSelectedPortion] = useState(null);
 
     // Customization State
-    const [ingredientOptions, setIngredientOptions] = useState({
-        Cheese: 'Normal',
-        Onion: 'Normal',
-        Spice: 'Normal',
-        Garlic: 'Normal'
-    });
+    const [ingredientOptions, setIngredientOptions] = useState({});
     const [specialInstruction, setSpecialInstruction] = useState('');
 
     useEffect(() => {
@@ -65,7 +60,11 @@ const FoodDetails = () => {
     const basePrice = Number(foodData.basePrice || foodData.base_price || 0);
     const price = (basePrice * (portionObj?.multiplier || 1)).toFixed(2);
     const images = foodData.images && foodData.images.length > 0 ? foodData.images : ['/placeholderfood.png'];
-    const ingredients = foodData.ingredients || ['Cheese', 'Onion', 'Garlic', 'Herbs'];
+    const ingredients = (foodData.ingredients && Array.isArray(foodData.ingredients))
+        ? foodData.ingredients
+        : (typeof foodData.ingredients === 'string' && foodData.ingredients.trim())
+            ? foodData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
     
     const allergensList = Array.isArray(foodData.allergens)
         ? foodData.allergens
@@ -240,39 +239,49 @@ const FoodDetails = () => {
                     )}
 
                     {/* Customization Options (Req Sec 29) */}
-                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-emerald-600" />
-                            <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                                Ingredient Customizations
-                            </h3>
-                        </div>
+                    {(() => {
+                        const customizableList = (foodData.ingredients && Array.isArray(foodData.ingredients) && foodData.ingredients.length > 0)
+                            ? foodData.ingredients
+                            : (typeof foodData.ingredients === 'string' && foodData.ingredients.trim())
+                                ? foodData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
+                                : [];
 
-                        {['Cheese', 'Onion', 'Spice', 'Garlic'].map((ing) => (
-                            <div key={ing} className="border-b border-slate-100 pb-3.5 last:border-0 last:pb-0">
-                                <span className="text-xs font-bold text-slate-700 block mb-2">{ing} Preference</span>
-                                <div className="grid grid-cols-4 gap-1.5">
-                                    {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
-                                        const label = lvl === 'No' ? `No ${ing}` : lvl;
-                                        const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
-                                        return (
-                                            <button
-                                                key={lvl}
-                                                type="button"
-                                                onClick={() => handleIngredientChange(ing, lvl)}
-                                                className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${isSelected
-                                                    ? 'bg-[#114536] text-white border-[#114536] shadow-sm'
-                                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                                                    }`}
-                                            >
-                                                {label}
-                                            </button>
-                                        );
-                                    })}
+                        return customizableList.length > 0 ? (
+                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                                    <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                                        Ingredient Customizations
+                                    </h3>
                                 </div>
+
+                                {customizableList.map((ing) => (
+                                    <div key={ing} className="border-b border-slate-100 pb-3.5 last:border-0 last:pb-0">
+                                        <span className="text-xs font-bold text-slate-700 block mb-2">{ing} Preference</span>
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                            {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
+                                                const label = lvl === 'No' ? `No ${ing}` : lvl;
+                                                const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
+                                                return (
+                                                    <button
+                                                        key={lvl}
+                                                        type="button"
+                                                        onClick={() => handleIngredientChange(ing, lvl)}
+                                                        className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${isSelected
+                                                            ? 'bg-[#114536] text-white border-[#114536] shadow-sm'
+                                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                            }`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        ) : null;
+                    })()}
 
                     {/* Special Instructions */}
                     <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">

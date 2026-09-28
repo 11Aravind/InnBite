@@ -113,27 +113,7 @@ export default function Cart() {
                     if (err?.message?.includes('cancelled')) {
                         return; // User intentionally closed popup
                     }
-
-                    const confirmDemo = window.confirm(
-                        `Razorpay Online Payment could not be processed (${err.message || '401 Unauthorized'}).\n\nWould you like to complete this order using Demo/Test Payment?`
-                    );
-
-                    if (confirmDemo) {
-                        setIsSubmitting(true);
-                        const demoPayload = {
-                            ...orderPayload,
-                            payment_status: 'SUCCESS',
-                            razorpay_payment_id: 'pay_demo_' + Date.now()
-                        };
-                        const res = await apiService.createOrder(demoPayload);
-                        setIsSubmitting(false);
-                        if (res.success) {
-                            handleSaveOrderState(res.order);
-                            emptyCart();
-                        } else {
-                            setCheckoutError(res.error || 'Failed to place order.');
-                        }
-                    }
+                    setCheckoutError('Payment failed: ' + (err.message || 'Unable to process payment. Please try again.'));
                 }
             });
         } catch (err) {

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import { apiService } from '../../utils/apiService';
 import { AdminSkeletonCards } from '../../components/AdminSkeletonTable';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { Plus, Printer, Trash2, QrCode, Sparkles, ShieldOff, CheckCircle } from 'lucide-react';
 
 export default function AdminTables() {
@@ -38,10 +40,30 @@ export default function AdminTables() {
         loadData();
     };
 
-    const handleDeleteTable = async (id) => {
-        if (window.confirm('Delete table assignment?')) {
-            await apiService.deleteTable(id);
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [tableToDelete, setTableToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteTableClick = (table) => {
+        setTableToDelete(table);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDeleteTable = async () => {
+        if (!tableToDelete) return;
+        setIsDeleting(true);
+        try {
+            await apiService.deleteTable(tableToDelete.id);
+            toast.success(`Table #${tableToDelete.table_number} deleted successfully!`);
+            setDeleteModalOpen(false);
+            setTableToDelete(null);
             loadData();
+        } catch (err) {
+            console.error('Delete table error:', err);
+            toast.error('Failed to delete table assignment. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -151,8 +173,8 @@ export default function AdminTables() {
                                         <Sparkles className="w-3 h-3 text-amber-500" /> Table #{tbl.table_number}
                                     </span>
                                     <button
-                                        onClick={() => handleDeleteTable(tbl.id)}
-                                        className="text-xs text-rose-500 hover:text-rose-700 font-bold print:hidden p-1"
+                                        onClick={() => handleDeleteTableClick(tbl)}
+                                        className="text-xs text-rose-500 hover:text-rose-700 font-bold print:hidden p-1 cursor-pointer"
                                         title="Delete table"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -204,6 +226,20 @@ export default function AdminTables() {
                     })}
                 </div>
             )}
+
+            {/* Reusable Confirm Delete Modal */}
+            <ConfirmDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setTableToDelete(null);
+                }}
+                onConfirm={handleConfirmDeleteTable}
+                title="Delete Table"
+                message="Are you sure you want to delete this table assignment and QR code?"
+                itemTitle={tableToDelete ? `Table #${tableToDelete.table_number}` : ''}
+                loading={isDeleting}
+            />
         </div>
     );
 }

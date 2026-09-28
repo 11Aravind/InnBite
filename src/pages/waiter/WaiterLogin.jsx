@@ -105,10 +105,6 @@ export default function WaiterLogin() {
                         )}
                     </button>
                 </form>
-
-                <div className="mt-6 text-center text-[11px] text-slate-500 font-medium">
-                    Demo Credentials: <span className="font-bold text-slate-800">waiter1 / password123</span>
-                </div>
             </div>
         </div>
     );

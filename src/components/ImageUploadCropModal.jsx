@@ -116,9 +116,10 @@ export default function ImageUploadCropModal({
 export function ImageFileInput({
     value,
     onChange,
-    label = "Upload Image File *",
+    label = "Upload Image File",
     aspect = 1,
-    allowUrl = false
+    allowUrl = false,
+    required = false
 }) {
     const [mode, setMode] = useState('file'); // 'file' | 'url'
     const [rawImage, setRawImage] = useState(null);
@@ -142,7 +143,9 @@ export function ImageFileInput({
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 block">{label}</label>
+                <label className="text-xs font-bold text-slate-700 block">
+                    {label} {required && <span className="text-rose-500 font-bold ml-0.5">*</span>}
+                </label>
                 {allowUrl && (
                     <div className="flex bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
                         <button

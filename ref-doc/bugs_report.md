@@ -17,6 +17,11 @@ This document records all architectural gaps, specification requirements, edge c
 | **GAP-07** | Integrity & Idempotency | Missing Server-Side Price Revalidation & Idempotency Key | ✅ **FIXED** | [Verification 5](#5-gap-07-price-revalidation--idempotency) |
 | **GAP-08** | QR Management | Missing Invalid/Revoked QR Error Screen & Live Revocation | ✅ **FIXED** | [Verification 6](#6-gap-08-qr-code-validation--revocation) |
 | **GAP-09** | Design Alignment | Admin Navigation Theme Customization (Forest Green & White) | ✅ **FIXED** | [Verification 7](#7-gap-09-admin-theme-alignment) |
+| **BUG-10** | Payment & Integrity | Demo Payment Prompt Bypass on Payment Failure | ✅ **FIXED** | [Verification 8](#8-bug-10-production-payment-error-handling) |
+| **BUG-11** | Data Integrity | Dummy Default Ingredients & Mock Seed Resurrections | ✅ **FIXED** | [Verification 9](#9-bug-11-purge-dummy-ingredient--seed-fallbacks) |
+| **BUG-12** | UI & Categories | Category Placeholder Image Auto-Injection | ✅ **FIXED** | [Verification 10](#10-bug-12-optional-category-image-handling) |
+| **GAP-13** | UX & Management | Reusable Common Delete Confirmation Modal & Toasts | ✅ **FIXED** | [Verification 11](#11-gap-13-common-delete-confirmation-modal--toast-feedback) |
+| **GAP-14** | Admin Management | Portion Sizes & Multiplier Inline Chip Editing | ✅ **FIXED** | [Verification 12](#12-gap-14-portion-sizes--pricing-chips-inline-editing) |
 
 ---
 
@@ -25,7 +30,7 @@ This document records all architectural gaps, specification requirements, edge c
 ### **1. BUG-01: Stale Local Storage Merging Deleted Supabase Records**
 - **Location**: `src/utils/apiService.js` (`getOrders`, `getTables`, `getWaiters`, `getDishes`)
 - **Root Cause**: The data fetching functions previously retrieved remote records from Supabase, identified items in `localStorage` whose IDs were missing from Supabase (`localOnly`), and merged them back into the array. When an admin deleted a record directly in Supabase, the application assumed the missing item was an offline draft and revived it from `localStorage`.
-- **Resolution**: Updated data fetchers in `apiService.js` to treat Supabase as the authoritative single source of truth when configured. When records are deleted from Supabase, `localStorage` is overwritten with the remote payload to purge deleted items.
+- **Resolution**: Completely purged `localStorage` mock data tracking (`MOCK_*_KEY`) and fallback caching logic from `apiService.js`. The system now acts exclusively as an online application querying Supabase directly as the single source of truth, eliminating any chance of stale offline data surfacing.
 
 ---
 
@@ -90,6 +95,41 @@ This document records all architectural gaps, specification requirements, edge c
 
 ---
 
+### **9. BUG-10: Production Payment Error Handling (No Demo Bypasses)**
+- **Location**: `src/pages/Cart.jsx`
+- **Root Cause**: When online payment failed, a browser `window.confirm` modal popped up prompting the user to complete the transaction via demo test payment (`pay_demo_...`), creating a security bypass in production.
+- **Resolution**: Removed the demo payment confirmation modal. Payment errors now cleanly update `checkoutError` state and display clear user feedback (`"Payment failed. Please try again."`).
+
+---
+
+### **10. BUG-11: Purged Dummy Default Ingredients & Mock Seed Resurrections**
+- **Location**: `src/pages/admin/AdminDishes.jsx`, `src/pages/FoodDetails.jsx`, `src/utils/apiService.js`
+- **Root Cause**: New dishes and customer dish views defaulted to hardcoded ingredient arrays (`['Cheese', 'Onion', 'Garlic', 'Spice']`). Additionally, database queries returning 0 items fell back to static mock seed objects (`foodDataMap`, `categoriesData`, `initialBanners`), resurrecting deleted data.
+- **Resolution**: Initialized ingredient customization state to empty arrays (`[]`). Updated data fetchers in `apiService.js` to treat 0-item empty database tables as valid empty state rather than resurrecting demo seed items.
+
+---
+
+### **11. BUG-12: Optional Category Image Handling (No Auto-Assigned Food Photos)**
+- **Location**: `src/pages/admin/AdminCategories.jsx`
+- **Root Cause**: Creating or saving a food category without uploading an image defaulted `image_url` to `'/placeholderfood.png'`.
+- **Resolution**: Updated category save and table cell rendering to keep image fields empty (`""`) when unprovided and render a clean category icon (`FolderKanban`) instead of auto-assigning sample food photos.
+
+---
+
+### **12. GAP-13: Reusable Common Delete Confirmation Modal & Toast Feedback**
+- **Location**: `src/components/ConfirmDeleteModal.jsx`, `AdminDishes.jsx`, `AdminCategories.jsx`, `AdminTables.jsx`, `AdminBanners.jsx`
+- **Requirement**: Replace native browser `window.confirm` popups with a uniform styled modal component and display success/failure toast notifications after deletion.
+- **Resolution**: Created `ConfirmDeleteModal.jsx` matching the `#114536` theme with item title displays and active loading state indicators. Integrated `react-hot-toast` notifications across all admin management screens.
+
+---
+
+### **13. GAP-14: Portion Sizes & Multiplier Inline Chip Editing**
+- **Location**: `src/pages/admin/AdminDishes.jsx`
+- **Requirement**: Allow direct inline editing of already-added portion chips and price multipliers within the dish modal.
+- **Resolution**: Added inline chip editing mode (`Edit2` button, label input, multiplier input, live price calculation preview, save/cancel buttons) and formatted chips to display clean size name + calculated price.
+
+---
+
 ## 🧪 Step-by-Step Verification Guide
 
 ### **1. Bug-01 & Bug-02: Supabase Deletion & Real-Time Sync**
@@ -117,6 +157,18 @@ This document records all architectural gaps, specification requirements, edge c
 3. Select the same Burger again, set Cheese: "Extra Cheese", and add to cart.
 4. Open Cart (`http://localhost:5173/cart`).
 5. **Expected Result**: Two separate cart item entries are displayed (1 Burger [No Cheese] and 1 Burger [Extra Cheese]), NOT merged into "Burger x 2".
+
+### **5. Bug-10 & Bug-11: Production Integrity & Clean Data State**
+1. Create a new dish in Admin Dishes without adding ingredient customizations.
+2. Open the dish details on customer menu.
+3. **Expected Result**: No dummy `Cheese`, `Onion`, `Garlic`, `Spice` preferences appear.
+4. Delete all categories or dishes in Supabase / Admin panel.
+5. Refresh page.
+6. **Expected Result**: Catalog displays cleanly empty list (0 items) without resurrecting sample demo items.
+
+### **6. Gap-13: Reusable Delete Modal & Toast**
+1. In Admin Dishes, Categories, Tables, or Banners, click the Delete icon.
+2. **Expected Result**: The common `ConfirmDeleteModal` pops up cleanly with item title and cancel/delete buttons. Upon confirming deletion, a green success toast appears in top center.
 
 ---
 

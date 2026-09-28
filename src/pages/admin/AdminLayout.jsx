@@ -46,9 +46,7 @@ export default function AdminLayout() {
                     {/* Brand Header */}
                     <div className="p-6 border-b border-[#195947] flex items-center justify-between">
                         <div className="flex items-center gap-3.5">
-                            <div className="w-9 h-9 rounded-xl bg-white text-[#114536] flex items-center justify-center font-black text-lg shadow-md shrink-0">
-                                I
-                            </div>
+                            <img src="logo/innbite-logo.png" alt="" />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
                                     InnBite <span className="text-[10px] uppercase font-bold bg-[#1b5d4b] text-emerald-200 px-1.5 py-0.5 rounded-md border border-[#267761]">Admin</span>

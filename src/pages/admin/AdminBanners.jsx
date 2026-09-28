@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
 import DataTable from '../../components/DataTable';
 import { ImageFileInput } from '../../components/ImageUploadCropModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import {
     Plus,
     Edit2,
@@ -67,10 +69,30 @@ export default function AdminBanners() {
         loadData();
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Delete promotional banner?')) {
-            await apiService.deleteBanner(id);
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [bannerToDelete, setBannerToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = (banner) => {
+        setBannerToDelete(banner);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!bannerToDelete) return;
+        setIsDeleting(true);
+        try {
+            await apiService.deleteBanner(bannerToDelete.id);
+            toast.success(`Banner "${bannerToDelete.title}" deleted successfully!`);
+            setDeleteModalOpen(false);
+            setBannerToDelete(null);
             loadData();
+        } catch (err) {
+            console.error('Delete banner error:', err);
+            toast.error('Failed to delete banner. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -136,8 +158,8 @@ export default function AdminBanners() {
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                            onClick={() => handleDelete(b.id)}
-                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors"
+                            onClick={() => handleDeleteClick(b)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition-colors cursor-pointer"
                             title="Delete Banner"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -191,7 +213,9 @@ export default function AdminBanners() {
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Banner Title *</label>
+                                <label className="text-xs font-bold text-slate-700 block mb-1">
+                                    Banner Title <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
@@ -227,6 +251,20 @@ export default function AdminBanners() {
                     </div>
                 </div>
             )}
+
+            {/* Reusable Confirm Delete Modal */}
+            <ConfirmDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setBannerToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                title="Delete Promo Banner"
+                message="Are you sure you want to delete this promotional banner?"
+                itemTitle={bannerToDelete?.title}
+                loading={isDeleting}
+            />
         </div>
     );
 }

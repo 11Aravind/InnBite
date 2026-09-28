@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
 import DataTable from '../../components/DataTable';
 import { ImageFileInput } from '../../components/ImageUploadCropModal';
+import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import {
     Plus,
     Edit2,
@@ -12,7 +14,8 @@ import {
     X,
     SlidersHorizontal,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Check
 } from 'lucide-react';
 
 export default function AdminDishes() {
@@ -27,19 +30,52 @@ export default function AdminDishes() {
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
 
+    // Portion Chip Card Form State
+    const [selectedPresetPortion, setSelectedPresetPortion] = useState('Regular');
+    const [customPortionLabel, setCustomPortionLabel] = useState('');
+    const [portionMultiplier, setPortionMultiplier] = useState('1.0');
+    const [editingPortionIdx, setEditingPortionIdx] = useState(null);
+    const [editPortionLabel, setEditPortionLabel] = useState('');
+    const [editPortionMultiplier, setEditPortionMultiplier] = useState('1.0');
+
+    const handleStartEditPortion = (idx, portion) => {
+        setEditingPortionIdx(idx);
+        setEditPortionLabel(portion.label);
+        setEditPortionMultiplier(String(portion.multiplier));
+    };
+
+    const handleSaveEditPortion = (idx) => {
+        if (!editPortionLabel.trim()) return;
+        const mult = Number(editPortionMultiplier) || 1;
+        const updatedPortions = [...formData.portions];
+        updatedPortions[idx] = {
+            value: editPortionLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            label: editPortionLabel.trim(),
+            multiplier: mult
+        };
+        setFormData({ ...formData, portions: updatedPortions });
+        setEditingPortionIdx(null);
+    };
+
+    // Ingredient Customization Form State
+    const [newCustomizationItem, setNewCustomizationItem] = useState('');
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         preparation: '',
         basePrice: '',
-        category: 'main-courses',
+        category: '',
         imageUrl: '',
-        ingredients: '',
+        ingredients: [],
         allergens: '',
         tasteProfile: '',
         isPopular: false,
         isSpecial: false,
-        isAvailable: true
+        isAvailable: true,
+        portions: [
+            { value: "regular", label: "Regular", multiplier: 1 }
+        ]
     });
 
     const loadData = async () => {
@@ -57,7 +93,7 @@ export default function AdminDishes() {
         loadData();
     }, []);
 
-    // Filter dishes based on category and status (search query handled by TanStack Table or pre-filtered)
+    // Filter dishes based on category and status
     const filteredDishes = useMemo(() => {
         return dishes.filter((dish) => {
             const dishCat = dish.category || dish.category_id;
@@ -75,21 +111,36 @@ export default function AdminDishes() {
     }, [dishes, selectedCategory, selectedStatus]);
 
     const handleOpenModal = (dish = null) => {
+        setSelectedPresetPortion('Regular');
+        setCustomPortionLabel('');
+        setPortionMultiplier('1.0');
+        setNewCustomizationItem('');
+        setEditingPortionIdx(null);
+
         if (dish) {
             setEditingDish(dish);
+            const parsedIngredients = Array.isArray(dish.ingredients)
+                ? dish.ingredients
+                : (typeof dish.ingredients === 'string' && dish.ingredients.trim())
+                    ? dish.ingredients.split(',').map(s => s.trim()).filter(Boolean)
+                    : ['Cheese', 'Onion', 'Garlic', 'Spice'];
+
             setFormData({
                 name: dish.name || '',
                 description: dish.description || '',
                 preparation: dish.preparation || dish.preparation_details || '',
                 basePrice: dish.basePrice || dish.base_price || '',
-                category: dish.category || dish.category_id || (categories[0]?.id || 'main-courses'),
+                category: dish.category || dish.category_id || '',
                 imageUrl: (dish.images && dish.images[0]) || dish.image || '',
-                ingredients: Array.isArray(dish.ingredients) ? dish.ingredients.join(', ') : '',
+                ingredients: parsedIngredients,
                 allergens: Array.isArray(dish.allergens) ? dish.allergens.join(', ') : '',
                 tasteProfile: Array.isArray(dish.tasteProfile || dish.taste_profile) ? (dish.tasteProfile || dish.taste_profile).join(', ') : '',
                 isPopular: Boolean(dish.is_popular || dish.isPopular),
                 isSpecial: Boolean(dish.is_special || dish.isSpecial),
-                isAvailable: dish.is_available !== undefined ? dish.is_available : true
+                isAvailable: dish.is_available !== undefined ? dish.is_available : true,
+                portions: (dish.portions && dish.portions.length > 0) ? dish.portions : [
+                    { value: "regular", label: "Regular", multiplier: 1 }
+                ]
             });
         } else {
             setEditingDish(null);
@@ -98,17 +149,30 @@ export default function AdminDishes() {
                 description: '',
                 preparation: '',
                 basePrice: '',
-                category: categories[0]?.id || 'main-courses',
+                category: '',
                 imageUrl: '',
-                ingredients: '',
+                ingredients: [],
                 allergens: '',
                 tasteProfile: '',
                 isPopular: false,
                 isSpecial: false,
-                isAvailable: true
+                isAvailable: true,
+                portions: [
+                    { value: "regular", label: "Regular", multiplier: 1 }
+                ]
             });
         }
         setIsModalOpen(true);
+    };
+
+    const handleAddIngredient = () => {
+        if (!newCustomizationItem.trim()) return;
+        const itemStr = newCustomizationItem.trim();
+        const current = Array.isArray(formData.ingredients) ? formData.ingredients : [];
+        if (!current.includes(itemStr)) {
+            setFormData({ ...formData, ingredients: [...current, itemStr] });
+        }
+        setNewCustomizationItem('');
     };
 
     const handleSaveDish = async (e) => {
@@ -123,14 +187,20 @@ export default function AdminDishes() {
             category: formData.category,
             category_id: formData.category,
             images: [formData.imageUrl || '/placeholderfood.png'],
-            portions: [
-                { value: "regular", label: "Regular", multiplier: 1 },
-                { value: "large", label: "Large", multiplier: 1.4 },
-                { value: "small", label: "Small", multiplier: 0.8 }
+            portions: (formData.portions && formData.portions.length > 0) ? formData.portions : [
+                { value: "regular", label: "Regular", multiplier: 1 }
             ],
-            ingredients: formData.ingredients.split(',').map(s => s.trim()).filter(Boolean),
-            allergens: formData.allergens.split(',').map(s => s.trim()).filter(Boolean),
-            tasteProfile: formData.tasteProfile.split(',').map(s => s.trim()).filter(Boolean),
+            ingredients: Array.isArray(formData.ingredients)
+                ? formData.ingredients
+                : typeof formData.ingredients === 'string'
+                    ? formData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
+                    : [],
+            allergens: typeof formData.allergens === 'string'
+                ? formData.allergens.split(',').map(s => s.trim()).filter(Boolean)
+                : formData.allergens,
+            tasteProfile: typeof formData.tasteProfile === 'string'
+                ? formData.tasteProfile.split(',').map(s => s.trim()).filter(Boolean)
+                : formData.tasteProfile,
             is_popular: formData.isPopular,
             is_special: formData.isSpecial,
             is_available: formData.isAvailable
@@ -151,10 +221,30 @@ export default function AdminDishes() {
         loadData();
     };
 
-    const handleDeleteDish = async (id) => {
-        if (window.confirm('Are you sure you want to delete this dish?')) {
-            await apiService.deleteDish(id);
+    // Delete Confirmation Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [dishToDelete, setDishToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteDishClick = (dish) => {
+        setDishToDelete(dish);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDeleteDish = async () => {
+        if (!dishToDelete) return;
+        setIsDeleting(true);
+        try {
+            await apiService.deleteDish(dishToDelete.id);
+            toast.success(`Dish "${dishToDelete.name}" deleted successfully!`);
+            setDeleteModalOpen(false);
+            setDishToDelete(null);
             loadData();
+        } catch (err) {
+            console.error('Delete dish error:', err);
+            toast.error('Failed to delete dish. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -204,7 +294,7 @@ export default function AdminDishes() {
             cell: ({ row }) => {
                 const dish = row.original;
                 const price = Number(dish.basePrice || dish.base_price || 0).toFixed(2);
-                return <span className="font-black text-emerald-600 text-sm">₹{price}</span>;
+                return <span className="font-black text-[#114536] text-sm">₹{price}</span>;
             }
         },
         {
@@ -214,19 +304,32 @@ export default function AdminDishes() {
                 const dish = row.original;
                 const isPop = dish.is_popular || dish.isPopular;
                 const isSpec = dish.is_special || dish.isSpecial;
+                const tasteTags = Array.isArray(dish.tasteProfile || dish.taste_profile)
+                    ? (dish.tasteProfile || dish.taste_profile)
+                    : typeof (dish.tasteProfile || dish.taste_profile) === 'string'
+                        ? (dish.tasteProfile || dish.taste_profile).split(',').map(s => s.trim()).filter(Boolean)
+                        : [];
+
                 return (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5 max-w-xs">
                         {isPop && (
-                            <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-200">
-                                <Star className="w-3 h-3 fill-amber-700" /> Popular
+                            <span className="bg-[#114536]/10 text-[#114536] border border-[#114536]/25 px-2.5 py-0.5 rounded-lg text-xs font-extrabold tracking-tight">
+                                Popular
                             </span>
                         )}
                         {isSpec && (
-                            <span className="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 border border-purple-200">
-                                <Sparkles className="w-3 h-3" /> Special
+                            <span className="bg-amber-50 text-amber-900 border border-amber-200/80 px-2.5 py-0.5 rounded-lg text-xs font-extrabold tracking-tight">
+                                Chef Special
                             </span>
                         )}
-                        {!isPop && !isSpec && <span className="text-slate-400 text-[11px] font-normal">—</span>}
+                        {tasteTags.map((tag, idx) => (
+                            <span key={idx} className="bg-slate-100 text-slate-700 border border-slate-200/70 px-2.5 py-0.5 rounded-lg text-xs font-semibold">
+                                {tag}
+                            </span>
+                        ))}
+                        {!isPop && !isSpec && tasteTags.length === 0 && (
+                            <span className="text-slate-400 text-xs font-medium italic">—</span>
+                        )}
                     </div>
                 );
             }
@@ -276,8 +379,8 @@ export default function AdminDishes() {
                             <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                            onClick={() => handleDeleteDish(dish.id)}
-                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200"
+                            onClick={() => handleDeleteDishClick(dish)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-rose-200 cursor-pointer"
                             title="Delete Dish"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -359,10 +462,10 @@ export default function AdminDishes() {
             {/* Add / Edit Dish Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl text-slate-900">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl text-slate-900">
                         <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
                             <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                                <Utensils className="w-5 h-5 text-rose-500" />
+                                <Utensils className="w-5 h-5 text-[#114536]" />
                                 {editingDish ? 'Edit Dish Details' : 'Add New Dish'}
                             </h2>
                             <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
@@ -370,37 +473,47 @@ export default function AdminDishes() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSaveDish} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Dish Name *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900 font-medium"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
+                        <form onSubmit={handleSaveDish} className="space-y-5">
+                            {/* One Row with 3 Columns: Dish Name, Base Price, Category */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">Base Price (₹) *</label>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                                        Dish Name <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Margherita Pizza"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                                        Base Price (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                    </label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         required
+                                        placeholder="250.00"
                                         value={formData.basePrice}
                                         onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900 font-bold"
+                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">Category *</label>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                                        Category <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                    </label>
                                     <select
+                                        required
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900 font-bold"
+                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
                                     >
+                                        <option value="" disabled>-- Select Category --</option>
                                         {categories.map((c) => (
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
@@ -408,10 +521,185 @@ export default function AdminDishes() {
                                 </div>
                             </div>
 
+                            {/* Portion Sizes & Pricing Chip Cards Manager */}
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-slate-800 block">
+                                        Portion Sizes & Pricing Chips
+                                    </label>
+                                    <span className="text-[10px] text-slate-500 font-semibold">
+                                        Base: ₹{Number(formData.basePrice || 0).toFixed(2)}
+                                    </span>
+                                </div>
+
+                                {/* List of active portion chip cards */}
+                                <div className="flex flex-wrap gap-2">
+                                    {formData.portions && formData.portions.map((p, idx) => {
+                                        const isEditing = editingPortionIdx === idx;
+                                        const calculatedPrice = (Number(formData.basePrice || 0) * (p.multiplier || 1)).toFixed(2);
+                                        const liveEditCalculatedPrice = (Number(formData.basePrice || 0) * (Number(editPortionMultiplier) || 1)).toFixed(2);
+
+                                        if (isEditing) {
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className="bg-emerald-50/70 border border-[#114536]/40 shadow-xs rounded-xl p-1.5 flex items-center gap-1.5 text-xs font-bold animate-fade-in"
+                                                >
+                                                    <input
+                                                        type="text"
+                                                        value={editPortionLabel}
+                                                        onChange={(e) => setEditPortionLabel(e.target.value)}
+                                                        placeholder="Portion Label"
+                                                        className="w-24 h-7 bg-white border border-slate-300 px-2 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
+                                                    />
+                                                    <div className="flex items-center gap-0.5">
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            value={editPortionMultiplier}
+                                                            onChange={(e) => setEditPortionMultiplier(e.target.value)}
+                                                            placeholder="1.0"
+                                                            className="w-16 h-7 bg-white border border-slate-300 px-1.5 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
+                                                        />
+                                                        <span className="text-[10px] text-slate-500 font-semibold">x</span>
+                                                    </div>
+                                                    <span className="text-[#114536] text-[11px] font-black bg-white px-1.5 py-0.5 rounded-md border border-emerald-200">
+                                                        ₹{liveEditCalculatedPrice}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSaveEditPortion(idx)}
+                                                        className="p-1 bg-[#114536] hover:bg-[#0d372b] text-white rounded-md transition-colors"
+                                                        title="Save Changes"
+                                                    >
+                                                        <Check className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditingPortionIdx(null)}
+                                                        className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
+                                                        title="Cancel"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className="bg-white border border-slate-200 shadow-2xs rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-slate-800 hover:border-slate-300 transition-all"
+                                            >
+                                                <span className="text-[#114536] font-extrabold">{p.label}</span>
+                                                <span className="text-slate-500 text-[11px] font-semibold bg-slate-100 px-1.5 py-0.5 rounded-md">
+                                                    ₹{calculatedPrice}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleStartEditPortion(idx, p)}
+                                                    className="text-slate-400 hover:text-[#114536] transition-colors ml-0.5"
+                                                    title="Edit portion size and price multiplier"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                </button>
+                                                {formData.portions.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = formData.portions.filter((_, i) => i !== idx);
+                                                            setFormData({ ...formData, portions: updated });
+                                                        }}
+                                                        className="text-slate-400 hover:text-rose-600 transition-colors"
+                                                        title="Remove portion size"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Add New Portion Chip Form with Preset Dropdown & Other Option */}
+                                <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                                        <select
+                                            value={selectedPresetPortion}
+                                            onChange={(e) => setSelectedPresetPortion(e.target.value)}
+                                            className="w-48 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-bold outline-none focus:border-[#114536]"
+                                        >
+                                            <option value="Regular">Regular (1x)</option>
+                                            <option value="Large">Large (1.4x)</option>
+                                            <option value="Small">Small (0.8x)</option>
+                                            <option value="Half">Half (0.6x)</option>
+                                            <option value="Full">Full (1.5x)</option>
+                                            <option value="Medium">Medium (1.1x)</option>
+                                            <option value="Family Pack">Family Pack (2.0x)</option>
+                                            <option value="Other">Other (Custom Size)...</option>
+                                        </select>
+
+                                        {selectedPresetPortion === 'Other' && (
+                                            <input
+                                                type="text"
+                                                placeholder="Enter custom size..."
+                                                value={customPortionLabel}
+                                                onChange={(e) => setCustomPortionLabel(e.target.value)}
+                                                className="flex-1 min-w-[140px] h-9 bg-white border border-slate-200 px-3 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                            />
+                                        )}
+
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            placeholder="Multiplier (e.g. 1.2)"
+                                            value={portionMultiplier}
+                                            onChange={(e) => setPortionMultiplier(e.target.value)}
+                                            className="w-32 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
+                                                if (!finalLabel) return;
+
+                                                let defaultMult = Number(portionMultiplier);
+                                                if (!portionMultiplier) {
+                                                    if (selectedPresetPortion === 'Large') defaultMult = 1.4;
+                                                    else if (selectedPresetPortion === 'Small') defaultMult = 0.8;
+                                                    else if (selectedPresetPortion === 'Half') defaultMult = 0.6;
+                                                    else if (selectedPresetPortion === 'Full') defaultMult = 1.5;
+                                                    else if (selectedPresetPortion === 'Medium') defaultMult = 1.1;
+                                                    else if (selectedPresetPortion === 'Family Pack') defaultMult = 2.0;
+                                                    else defaultMult = 1.0;
+                                                }
+
+                                                const newChip = {
+                                                    value: finalLabel.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                                                    label: finalLabel,
+                                                    multiplier: defaultMult || 1
+                                                };
+
+                                                setFormData({
+                                                    ...formData,
+                                                    portions: [...(formData.portions || []), newChip]
+                                                });
+                                                setCustomPortionLabel('');
+                                                setPortionMultiplier('');
+                                            }}
+                                            className="h-9 px-4 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" /> Add Chip
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <ImageFileInput
                                 value={formData.imageUrl}
                                 onChange={(croppedImg) => setFormData({ ...formData, imageUrl: croppedImg })}
-                                label="Upload Dish Image (File Upload & Crop) *"
+                                label="Upload Dish Image (File Upload & Crop)"
                                 aspect={4 / 3}
                             />
 
@@ -436,37 +724,86 @@ export default function AdminDishes() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Ingredients (comma-separated)</label>
-                                <input
-                                    type="text"
-                                    placeholder="Tomatoes, Cheese, Basil"
-                                    value={formData.ingredients}
-                                    onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900"
-                                />
+                            {/* Ingredient Customizations Options Manager */}
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-slate-800 block">
+                                        Customizable Ingredients (Customer Side Preferences)
+                                    </label>
+                                    <span className="text-[10px] text-slate-500 font-semibold">
+                                        {Array.isArray(formData.ingredients) ? formData.ingredients.length : 0} items
+                                    </span>
+                                </div>
+
+                                {/* List of active customizable ingredient chips */}
+                                <div className="flex flex-wrap gap-2">
+                                    {Array.isArray(formData.ingredients) && formData.ingredients.map((ing, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="bg-white border border-slate-200 shadow-2xs rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-slate-800"
+                                        >
+                                            <span className="text-[#114536]">{ing}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const updated = formData.ingredients.filter((_, i) => i !== idx);
+                                                    setFormData({ ...formData, ingredients: updated });
+                                                }}
+                                                className="text-slate-400 hover:text-rose-600 transition-colors ml-0.5"
+                                                title="Remove ingredient customization"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Add Customization Input */}
+                                <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Add customizable item (e.g. Cheese, Mayo, Jalapenos, Garlic)..."
+                                        value={newCustomizationItem}
+                                        onChange={(e) => setNewCustomizationItem(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleAddIngredient();
+                                            }
+                                        }}
+                                        className="flex-1 h-9 bg-white border border-slate-200 px-3 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddIngredient}
+                                        className="h-9 px-3 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" /> Add Item
+                                    </button>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Allergens (comma-separated)</label>
-                                <input
-                                    type="text"
-                                    placeholder="Milk, Gluten"
-                                    value={formData.allergens}
-                                    onChange={(e) => setFormData({ ...formData, allergens: e.target.value })}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Taste Profile (comma-separated)</label>
-                                <input
-                                    type="text"
-                                    placeholder="Savory, Rich, Fresh"
-                                    value={formData.tasteProfile}
-                                    onChange={(e) => setFormData({ ...formData, tasteProfile: e.target.value })}
-                                    className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-rose-500 text-slate-900"
-                                />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">Allergens (comma-separated)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Milk, Gluten"
+                                        value={formData.allergens}
+                                        onChange={(e) => setFormData({ ...formData, allergens: e.target.value })}
+                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">Taste Profile (comma-separated)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Savory, Rich, Fresh"
+                                        value={formData.tasteProfile}
+                                        onChange={(e) => setFormData({ ...formData, tasteProfile: e.target.value })}
+                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex flex-wrap gap-4 pt-2">
@@ -515,6 +852,20 @@ export default function AdminDishes() {
                     </div>
                 </div>
             )}
+
+            {/* Reusable Confirm Delete Modal */}
+            <ConfirmDeleteModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setDishToDelete(null);
+                }}
+                onConfirm={handleConfirmDeleteDish}
+                title="Delete Dish"
+                message="Are you sure you want to delete this dish from the menu? This action cannot be undone."
+                itemTitle={dishToDelete?.name}
+                loading={isDeleting}
+            />
         </div>
     );
 }
