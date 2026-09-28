@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from 'react-use-cart';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import NetworkStatusBanner from './components/NetworkStatusBanner';
@@ -41,6 +42,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
+          <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
           <NetworkStatusBanner />
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>

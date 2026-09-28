@@ -9,6 +9,7 @@ import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
+import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
 
@@ -37,19 +38,62 @@ export default function Home() {
     const [allDishes, setAllDishes] = useState([]);
     const [apiLoading, setApiLoading] = useState(true);
 
+    const validateActiveOrder = async (orderToCheck) => {
+        if (!orderToCheck || !orderToCheck.id) return;
+        const allOrders = await apiService.getOrders();
+        const found = allOrders.find(o => o.id === orderToCheck.id || o.order_number === orderToCheck.order_number);
+
+        if (!found || found.status === 'SERVED' || found.status === 'completed' || found.status === 'CANCELLED') {
+            localStorage.removeItem('orderly_active_order');
+            setActiveOrder(null);
+        } else {
+            setActiveOrder(found);
+            localStorage.setItem('orderly_active_order', JSON.stringify(found));
+        }
+    };
+
     useEffect(() => {
         const storedOrder = localStorage.getItem('orderly_active_order');
         if (storedOrder) {
             try {
                 const parsed = JSON.parse(storedOrder);
                 if (parsed && parsed.id) {
-                    setActiveOrder(parsed);
+                    validateActiveOrder(parsed);
                 }
             } catch (e) {
                 console.error('Error parsing stored active order:', e);
             }
         }
     }, []);
+
+    useEffect(() => {
+        let subscription;
+        if (isSupabaseConfigured && supabase && activeOrder?.id) {
+            subscription = supabase
+                .channel(`home_order_track_${activeOrder.id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                    if (payload.eventType === 'DELETE' && (payload.old?.id === activeOrder.id)) {
+                        localStorage.removeItem('orderly_active_order');
+                        setActiveOrder(null);
+                        setShowOrderModal(false);
+                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === activeOrder.id) {
+                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
+                            localStorage.removeItem('orderly_active_order');
+                            setActiveOrder(null);
+                            setShowOrderModal(false);
+                        } else {
+                            setActiveOrder(prev => ({ ...prev, ...payload.new }));
+                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...activeOrder, ...payload.new }));
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        return () => {
+            if (subscription) supabase.removeChannel(subscription);
+        };
+    }, [activeOrder?.id]);
 
     useEffect(() => {
         const tableFromUrl = searchParams.get('table');

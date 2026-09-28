@@ -13,8 +13,17 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
         const allOrders = await apiService.getOrders();
         const updated = allOrders.find(o => o.id === order.id || o.order_number === order.order_number);
         if (updated) {
-            setOrder(updated);
-            localStorage.setItem('orderly_active_order', JSON.stringify(updated));
+            if (updated.status === 'SERVED' || updated.status === 'completed' || updated.status === 'CANCELLED') {
+                localStorage.removeItem('orderly_active_order');
+                onClose();
+            } else {
+                setOrder(updated);
+                localStorage.setItem('orderly_active_order', JSON.stringify(updated));
+            }
+        } else {
+            // Order was removed from database
+            localStorage.removeItem('orderly_active_order');
+            onClose();
         }
         setIsRefreshing(false);
     };
@@ -30,10 +39,18 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
         if (isSupabaseConfigured && supabase && order?.id) {
             subscription = supabase
                 .channel(`order_track_${order.id}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` }, (payload) => {
-                    if (payload.new) {
-                        setOrder(prev => ({ ...prev, ...payload.new }));
-                        localStorage.setItem('orderly_active_order', JSON.stringify({ ...order, ...payload.new }));
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                    if (payload.eventType === 'DELETE' && (payload.old?.id === order.id)) {
+                        localStorage.removeItem('orderly_active_order');
+                        onClose();
+                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === order.id) {
+                        if (payload.new.status === 'SERVED' || payload.new.status === 'completed' || payload.new.status === 'CANCELLED') {
+                            localStorage.removeItem('orderly_active_order');
+                            onClose();
+                        } else {
+                            setOrder(prev => ({ ...prev, ...payload.new }));
+                            localStorage.setItem('orderly_active_order', JSON.stringify({ ...order, ...payload.new }));
+                        }
                     }
                 })
                 .subscribe();

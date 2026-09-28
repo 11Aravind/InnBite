@@ -6,6 +6,7 @@ import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Sparkles, MessageSquare, Plus, Check, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -115,7 +116,19 @@ const FoodDetails = () => {
             },
             quantity
         );
-        navigate('/cart');
+
+        toast.success(`${quantity}x ${foodData.name} added to order!`, {
+            icon: '🛒',
+            style: {
+                borderRadius: '16px',
+                background: '#114536',
+                color: '#ffffff',
+                fontWeight: '700',
+                fontSize: '14px',
+                padding: '12px 18px',
+            },
+            duration: 2500,
+        });
     };
 
     return (
@@ -155,7 +168,7 @@ const FoodDetails = () => {
                             <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
                                 {foodData.name}
                             </h1>
-                            <span className="text-xl font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-xl border border-rose-100">
+                            <span className="text-xl font-black text-[#114536] bg-[#114536]/10 px-3.5 py-1 rounded-xl border border-[#114536]/20">
                                 ₹{price}
                             </span>
                         </div>
@@ -191,13 +204,13 @@ const FoodDetails = () => {
 
                     {/* Taste Profile Sparkles Pill */}
                     {tasteProfileList.length > 0 && (
-                        <div className="bg-sky-50/90 border border-sky-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
-                            <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                        <div className="bg-emerald-50/90 border border-emerald-200 p-4 rounded-2xl flex items-center gap-3 shadow-xs">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-[#114536] flex items-center justify-center shrink-0">
                                 <Sparkles className="w-4.5 h-4.5 stroke-[2.5]" />
                             </div>
                             <div className="text-sm leading-tight">
-                                <span className="font-extrabold text-sky-900">Taste Profile: </span>
-                                <span className="font-semibold text-sky-700">{tasteProfileList.join(', ')}</span>
+                                <span className="font-extrabold text-[#114536]">Taste Profile: </span>
+                                <span className="font-semibold text-emerald-800">{tasteProfileList.join(', ')}</span>
                             </div>
                         </div>
                     )}
@@ -215,7 +228,7 @@ const FoodDetails = () => {
                                         type="button"
                                         onClick={() => setSelectedPortion(portion.value)}
                                         className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${selectedPortion === portion.value
-                                            ? 'bg-slate-900 text-white shadow-md'
+                                            ? 'bg-[#114536] text-white shadow-md shadow-[#114536]/20'
                                             : 'text-slate-600 hover:text-slate-900'
                                             }`}
                                     >
@@ -229,7 +242,7 @@ const FoodDetails = () => {
                     {/* Customization Options (Req Sec 29) */}
                     <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-amber-500" />
+                            <Sparkles className="w-4 h-4 text-emerald-600" />
                             <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
                                 Ingredient Customizations
                             </h3>
@@ -248,7 +261,7 @@ const FoodDetails = () => {
                                                 type="button"
                                                 onClick={() => handleIngredientChange(ing, lvl)}
                                                 className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all ${isSelected
-                                                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                                                    ? 'bg-[#114536] text-white border-[#114536] shadow-sm'
                                                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                                                     }`}
                                             >
@@ -264,7 +277,7 @@ const FoodDetails = () => {
                     {/* Special Instructions */}
                     <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80">
                         <div className="flex items-center gap-2 mb-2">
-                            <MessageSquare className="w-4 h-4 text-indigo-500" />
+                            <MessageSquare className="w-4 h-4 text-[#114536]" />
                             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                 Special Instructions
                             </h3>
@@ -274,7 +287,7 @@ const FoodDetails = () => {
                             placeholder="e.g. Less oil, extra crispy, no garlic..."
                             value={specialInstruction}
                             onChange={(e) => setSpecialInstruction(e.target.value)}
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all resize-none"
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-900 outline-none focus:bg-white focus:border-[#114536] transition-all resize-none"
                         />
                     </div>
                 </div>
@@ -287,7 +300,7 @@ const FoodDetails = () => {
                         <button
                             type="button"
                             onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm"
+                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm hover:bg-slate-50"
                         >
                             -
                         </button>
@@ -295,7 +308,7 @@ const FoodDetails = () => {
                         <button
                             type="button"
                             onClick={() => setQuantity(prev => prev + 1)}
-                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm"
+                            className="w-8 h-8 rounded-xl bg-white text-slate-900 font-bold shadow-sm flex items-center justify-center text-sm hover:bg-slate-50"
                         >
                             +
                         </button>
@@ -304,7 +317,7 @@ const FoodDetails = () => {
                     <button
                         type="button"
                         onClick={handleAddToCart}
-                        className="flex-1 py-3.5 px-6 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-slate-900/10 flex items-center justify-between transition-all"
+                        className="flex-1 py-3.5 px-6 bg-[#114536] hover:bg-[#0d372b] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-[#114536]/20 flex items-center justify-between transition-all active:scale-[0.99]"
                     >
                         <span>Add to Order</span>
                         <span>₹{(price * quantity).toFixed(2)}</span>
