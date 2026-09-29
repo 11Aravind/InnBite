@@ -6,11 +6,13 @@ import { apiService } from '../utils/apiService';
 import { getOrCreateCustomerSession } from '../utils/session';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
-import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle } from 'lucide-react';
+import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle, Store, CheckCircle2 } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Cart() {
     const navigate = useNavigate();
+    const { settings } = useSettings();
     const {
         items,
         updateItemQuantity,
@@ -22,20 +24,42 @@ export default function Cart() {
 
     const session = getOrCreateCustomerSession();
 
-    const [settings, setSettings] = useState(null);
     const [tableNumber, setTableNumber] = useState(() => {
         return session.table_number || secureStorage.getItem('orderly_table_number') || '1';
     });
 
-    const [customerName, setCustomerName] = useState('');
-    const [customerPhone, setCustomerPhone] = useState('');
+    const [customerName, setCustomerName] = useState(() => {
+        return secureStorage.getItem('orderly_customer_name') || '';
+    });
+    const [customerPhone, setCustomerPhone] = useState(() => {
+        return secureStorage.getItem('orderly_customer_phone') || '';
+    });
+
+    const handleCustomerNameChange = (e) => {
+        const val = e.target.value;
+        setCustomerName(val);
+        secureStorage.setItem('orderly_customer_name', val);
+    };
+
+    const handleCustomerPhoneChange = (e) => {
+        const val = e.target.value;
+        setCustomerPhone(val);
+        secureStorage.setItem('orderly_customer_phone', val);
+    };
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(null);
     const [checkoutError, setCheckoutError] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('online');
+
+    const paymentModeSetting = settings?.payment_mode || 'BOTH';
 
     useEffect(() => {
-        apiService.getRestaurantSettings().then(setSettings);
-    }, []);
+        if (paymentModeSetting === 'PAY_AT_COUNTER') {
+            setPaymentMethod('cash_at_counter');
+        } else if (paymentModeSetting === 'ONLINE_ONLY') {
+            setPaymentMethod('online');
+        }
+    }, [paymentModeSetting]);
 
     const isSelfService = (settings?.service_mode || session.service_mode) === 'SELF_SERVICE';
 
@@ -63,7 +87,6 @@ export default function Cart() {
         setCheckoutError('');
         setIsSubmitting(true);
 
-        // Generate Idempotency Key (Req Sec 42, 52)
         const checkoutAttemptId = 'chk_' + session.session_id + '_' + Date.now();
 
         const orderPayload = {
@@ -75,8 +98,6 @@ export default function Cart() {
             customer_name: customerName || 'Guest',
             customer_phone: customerPhone || '',
             total_amount: cartTotal,
-            payment_method: 'razorpay',
-            payment_status: 'SUCCESS',
             items: items.map(item => ({
                 id: item.id,
                 dish_id: item.dish_id || item.id,
@@ -89,6 +110,30 @@ export default function Cart() {
             }))
         };
 
+        // If paying at counter / cash on shop
+        if (paymentMethod === 'cash_at_counter' || paymentModeSetting === 'PAY_AT_COUNTER') {
+            try {
+                const counterPayload = {
+                    ...orderPayload,
+                    payment_method: 'cash_at_counter',
+                    payment_status: 'PENDING'
+                };
+                const res = await apiService.createOrder(counterPayload);
+                setIsSubmitting(false);
+                if (res.success) {
+                    handleSaveOrderState(res.order);
+                    emptyCart();
+                } else {
+                    setCheckoutError(res.error || 'Failed to place order.');
+                }
+            } catch (err) {
+                setIsSubmitting(false);
+                setCheckoutError('Order Error: ' + (err.message || 'Unknown error'));
+            }
+            return;
+        }
+
+        // Online Razorpay Payment
         try {
             await openRazorpayCheckout({
                 amount: cartTotal,
@@ -97,6 +142,7 @@ export default function Cart() {
                 onSuccess: async (razorpayResponse) => {
                     const finalPayload = {
                         ...orderPayload,
+                        payment_method: 'razorpay',
                         payment_status: 'SUCCESS',
                         razorpay_payment_id: razorpayResponse.razorpay_payment_id
                     };
@@ -112,7 +158,7 @@ export default function Cart() {
                 onFailure: async (err) => {
                     setIsSubmitting(false);
                     if (err?.message?.includes('cancelled')) {
-                        return; // User intentionally closed popup
+                        return;
                     }
                     setCheckoutError('Payment failed: ' + (err.message || 'Unable to process payment. Please try again.'));
                 }
@@ -231,25 +277,97 @@ export default function Cart() {
 
                 {!isEmpty && (
                     <>
-                        {/* Customer Details Form */}
+                        {/* Customer Details Form (Optional) */}
                         <div className="px-4 py-4 space-y-3 border-t border-[#f4f1f1] mt-4">
-                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">
-                                Guest Details
-                            </h3>
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">
+                                    Guest Details
+                                </h3>
+                                <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                    Optional
+                                </span>
+                            </div>
                             <input
                                 type="text"
-                                placeholder="Your Name (e.g. John)"
+                                placeholder="Your Name (Optional)"
                                 value={customerName}
-                                onChange={(e) => setCustomerName(e.target.value)}
+                                onChange={handleCustomerNameChange}
                                 className="w-full px-4 py-3 bg-[#f4f1f1] border-none rounded-xl text-sm font-medium text-[#171312] outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-[#836c67]"
                             />
                             <input
                                 type="tel"
-                                placeholder="Phone Number"
+                                placeholder="Phone Number (Optional)"
                                 value={customerPhone}
-                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                onChange={handleCustomerPhoneChange}
                                 className="w-full px-4 py-3 bg-[#f4f1f1] border-none rounded-xl text-sm font-medium text-[#171312] outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-[#836c67]"
                             />
+                        </div>
+
+                        {/* Payment Method Selector based on Superadmin Setting */}
+                        <div className="px-4 py-4 space-y-3 border-t border-[#f4f1f1]">
+                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">
+                                Payment Option
+                            </h3>
+
+                            {paymentModeSetting === 'ONLINE_ONLY' && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-900">
+                                    <CreditCard className="w-5 h-5 text-emerald-600 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-bold">Online Payment Only (Razorpay / UPI)</p>
+                                        <p className="text-[11px] text-emerald-700">Pre-payment required by hotel policy.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentModeSetting === 'PAY_AT_COUNTER' && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-900">
+                                    <Store className="w-5 h-5 text-amber-600 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-bold">Pay at Cash Counter / Shop</p>
+                                        <p className="text-[11px] text-amber-700">Pay cash or card directly when receiving order.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentModeSetting === 'BOTH' && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div
+                                        onClick={() => setPaymentMethod('online')}
+                                        className={`cursor-pointer p-3 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-2 ${
+                                            paymentMethod === 'online'
+                                                ? 'border-emerald-600 bg-emerald-50/60 shadow-sm'
+                                                : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <CreditCard className="w-4 h-4 text-emerald-600" />
+                                            {paymentMethod === 'online' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900">Pay Online</p>
+                                            <p className="text-[10px] text-slate-500">Razorpay / UPI / Cards</p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        onClick={() => setPaymentMethod('cash_at_counter')}
+                                        className={`cursor-pointer p-3 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-2 ${
+                                            paymentMethod === 'cash_at_counter'
+                                                ? 'border-emerald-600 bg-emerald-50/60 shadow-sm'
+                                                : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <Store className="w-4 h-4 text-amber-600" />
+                                            {paymentMethod === 'cash_at_counter' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900">Pay at Counter</p>
+                                            <p className="text-[10px] text-slate-500">Cash / Card at Shop</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Order Summary */}

@@ -8,9 +8,11 @@ import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Sparkles, MessageSquare, Plus, Check, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { APP_CONFIG } from '../config';
+import { useSettings } from '../context/SettingsContext';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
+    const { appName } = useSettings();
     const { foodId } = useParams();
     const { addItem, totalUniqueItems } = useCart();
 
@@ -75,11 +77,15 @@ const FoodDetails = () => {
             ? foodData.ingredients.split(',').map(s => s.trim()).filter(Boolean)
             : [];
     
-    const ingredientsList = Array.isArray(foodData.ingredients_list) 
+    let ingredientsList = Array.isArray(foodData.ingredients_list) && foodData.ingredients_list.length > 0
         ? foodData.ingredients_list 
-        : typeof foodData.ingredients_list === 'string'
+        : typeof foodData.ingredients_list === 'string' && foodData.ingredients_list.trim()
             ? foodData.ingredients_list.split(',').map(s => s.trim()).filter(Boolean)
             : [];
+            
+    if (ingredientsList.length === 0 && ingredients.length > 0) {
+        ingredientsList = ingredients;
+    }
 
     const allergensList = Array.isArray(foodData.allergens)
         ? foodData.allergens
@@ -159,7 +165,7 @@ const FoodDetails = () => {
                         </svg>
                     </div>
                     <h2 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center uppercase">
-                        {APP_CONFIG.APP_NAME}
+                        {appName}
                     </h2>
                     <div className="flex items-center gap-3">
                         <button className="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-[#171312] transition-transform active:scale-95">
@@ -182,15 +188,15 @@ const FoodDetails = () => {
                 </div>
 
                 {/* Image Carousel */}
-                <div className="flex overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <div className="flex w-full">
+                <div className="flex overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-4">
+                    <div className="flex gap-3 w-max py-2">
                         {images.map((img, idx) => (
-                            <div key={idx} className="flex-none w-full sm:w-1/2 md:w-1/3 snap-center p-2">
+                            <div key={idx} className={`flex-none ${images.length > 1 ? 'w-[88vw]' : 'w-[calc(100vw-32px)]'} max-w-[400px] snap-center`}>
                                 <ImageWithSkeleton
                                     src={img}
                                     alt={`${foodData.name} ${idx + 1}`}
-                                    aspectRatio="aspect-[4/3]"
-                                    className="w-full bg-center bg-no-repeat bg-cover rounded-xl"
+                                    aspectRatio="aspect-square"
+                                    className="w-full bg-center bg-no-repeat bg-cover rounded-xl shadow-sm"
                                 />
                             </div>
                         ))}
@@ -205,7 +211,7 @@ const FoodDetails = () => {
                 )}
 
                 {/* Title & Price */}
-                <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-0.5 pt-5">
+                <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-3 pt-5">
                     {foodData.name}
                 </h1>
                 <p className="text-[#836c67] text-sm font-normal leading-normal pb-3 pt-1 px-4">
@@ -247,9 +253,9 @@ const FoodDetails = () => {
                     <>
                         <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Ingredients</h3>
                         <div className="flex gap-3 p-3 overflow-x-auto snap-x snap-mandatory [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            <div className="flex flex-nowrap">
+                            <div className="flex flex-nowrap gap-3">
                                 {ingredientsList.map((ing, idx) => (
-                                    <div key={idx} className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f4f1f1] px-4 mr-2">
+                                    <div key={idx} className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f4f1f1] px-4">
                                         <p className="text-[#171312] text-sm font-medium leading-normal whitespace-nowrap">{ing}</p>
                                     </div>
                                 ))}
@@ -257,6 +263,10 @@ const FoodDetails = () => {
                         </div>
                     </>
                 )}
+
+
+
+
 
                 {/* Preparation */}
                 {foodData.preparation && (
@@ -270,7 +280,7 @@ const FoodDetails = () => {
 
                 {/* Allergens */}
                 {allergensList.length > 0 && (
-                    <div className="flex items-center gap-4 bg-white px-4 min-h-14 mt-2">
+                    <div className="flex items-center gap-4 bg-white px-4 min-h-14">
                         <div className="text-[#171312] flex items-center justify-center rounded-lg bg-[#f4f1f1] shrink-0 size-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
                                 <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"></path>
@@ -296,41 +306,7 @@ const FoodDetails = () => {
                     </div>
                 )}
 
-                {/* Customizations */}
-                {(() => {
-                    const customizableList = ingredients;
-                    return customizableList.length > 0 ? (
-                        <div className="px-4 py-4 space-y-4">
-                            <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">Ingredient Customizations</h3>
-                            {customizableList.map((ing) => (
-                                <div key={ing} className="border-b border-[#f4f1f1] pb-3 last:border-0 last:pb-0">
-                                    <span className="text-sm font-medium text-[#171312] block mb-2">{ing} Preference</span>
-                                    <div className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#f4f1f1] p-1">
-                                        {['Less', 'Normal', 'Extra', 'No'].map((lvl) => {
-                                            const label = lvl === 'No' ? `No ${ing}` : lvl;
-                                            const isSelected = (ingredientOptions[ing] || 'Normal') === lvl;
-                                            return (
-                                                <label
-                                                    key={lvl}
-                                                    className={`flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-full px-2 text-xs font-medium leading-normal transition-all ${isSelected ? 'bg-white shadow-[0_0_4px_rgba(0,0,0,0.1)] text-[#171312]' : 'text-[#836c67]'}`}
-                                                >
-                                                    <span className="truncate">{label}</span>
-                                                    <input 
-                                                        type="radio"
-                                                        className="invisible w-0" 
-                                                        value={lvl}
-                                                        checked={isSelected}
-                                                        onChange={() => handleIngredientChange(ing, lvl)}
-                                                    />
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : null;
-                })()}
+
 
                 {/* Special Instructions */}
                 <div className="px-4 py-4">

@@ -8,6 +8,91 @@
     --color-primary-hover: #0c382b;
     --color-primary-light: #e6f4f0;
     --color-primary-border: #195947;
+
+    --color-sidebar-bg: #114536;
+    --color-sidebar-border: #195947;
+    --color-sidebar-active: #0a2e23;
+    --color-sidebar-active-border: #165644;
+    --color-sidebar-hover: #185544;
+}
+
+/* Dynamic Theme Presets */
+[data-theme="emerald"] {
+    --color-primary: #114536;
+    --color-primary-hover: #0c382b;
+    --color-primary-light: #e6f4f0;
+    --color-primary-border: #195947;
+
+    --color-sidebar-bg: #114536;
+    --color-sidebar-border: #195947;
+    --color-sidebar-active: #0a2e23;
+    --color-sidebar-active-border: #165644;
+    --color-sidebar-hover: #185544;
+}
+
+[data-theme="indigo"] {
+    --color-primary: #4338ca;
+    --color-primary-hover: #3730a3;
+    --color-primary-light: #e0e7ff;
+    --color-primary-border: #4f46e5;
+
+    --color-sidebar-bg: #1e1b4b;
+    --color-sidebar-border: #312e81;
+    --color-sidebar-active: #12103b;
+    --color-sidebar-active-border: #3730a3;
+    --color-sidebar-hover: #2e2a72;
+}
+
+[data-theme="rose"] {
+    --color-primary: #be123c;
+    --color-primary-hover: #9f1239;
+    --color-primary-light: #ffe4e6;
+    --color-primary-border: #e11d48;
+
+    --color-sidebar-bg: #4c0519;
+    --color-sidebar-border: #881337;
+    --color-sidebar-active: #2e030f;
+    --color-sidebar-active-border: #9f1239;
+    --color-sidebar-hover: #700926;
+}
+
+[data-theme="violet"] {
+    --color-primary: #6d28d9;
+    --color-primary-hover: #5b21b6;
+    --color-primary-light: #f3e8ff;
+    --color-primary-border: #7c3aed;
+
+    --color-sidebar-bg: #2e1065;
+    --color-sidebar-border: #4c1d95;
+    --color-sidebar-active: #1c0942;
+    --color-sidebar-active-border: #5b21b6;
+    --color-sidebar-hover: #3b1680;
+}
+
+[data-theme="amber"] {
+    --color-primary: #b45309;
+    --color-primary-hover: #92400e;
+    --color-primary-light: #fef3c7;
+    --color-primary-border: #d97706;
+
+    --color-sidebar-bg: #451a03;
+    --color-sidebar-border: #78350f;
+    --color-sidebar-active: #290f02;
+    --color-sidebar-active-border: #92400e;
+    --color-sidebar-hover: #632605;
+}
+
+[data-theme="slate"] {
+    --color-primary: #1e293b;
+    --color-primary-hover: #0f172a;
+    --color-primary-light: #f1f5f9;
+    --color-primary-border: #334155;
+
+    --color-sidebar-bg: #0f172a;
+    --color-sidebar-border: #1e293b;
+    --color-sidebar-active: #020617;
+    --color-sidebar-active-border: #334155;
+    --color-sidebar-hover: #1e293b;
 }
 
 body {
@@ -16,16 +101,80 @@ body {
     font-style: normal;
 }
 
+/* Theme Helper Utility Classes */
+.bg-sidebar {
+    background-color: var(--color-sidebar-bg) !important;
+}
+
+.border-sidebar {
+    border-color: var(--color-sidebar-border) !important;
+}
+
+.bg-sidebar-active {
+    background-color: var(--color-sidebar-active) !important;
+}
+
+.border-sidebar-active {
+    border-color: var(--color-sidebar-active-border) !important;
+}
+
+.bg-themePrimary {
+    background-color: var(--color-primary) !important;
+}
+
+.text-themePrimary {
+    color: var(--color-primary) !important;
+}
+
+.border-themePrimary {
+    border-color: var(--color-primary-border) !important;
+}
+
 @layer components {
     .btn-primary {
-        @apply bg-[#114536] hover:bg-[#0c382b] text-white font-bold rounded-xl transition-all shadow-md active:scale-[0.98] disabled:opacity-50 inline-flex items-center justify-center gap-2 cursor-pointer;
+        background-color: var(--color-primary) !important;
+        color: #ffffff !important;
+        font-weight: 700;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-hover) !important;
+    }
+    .btn-primary:disabled {
+        opacity: 0.5;
     }
 
     .btn-secondary {
-        @apply bg-white hover:bg-emerald-50/70 text-[#114536] border border-[#114536]/20 font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] inline-flex items-center justify-center gap-2 cursor-pointer;
+        background-color: #ffffff !important;
+        color: var(--color-primary) !important;
+        border: 1px solid var(--color-primary-border) !important;
+        font-weight: 700;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+    .btn-secondary:hover {
+        background-color: var(--color-primary-light) !important;
     }
 
     .badge-primary {
-        @apply bg-[#114536]/10 text-[#114536] border border-[#114536]/20 px-2.5 py-0.5 rounded-full text-xs font-bold;
+        background-color: var(--color-primary-light) !important;
+        color: var(--color-primary) !important;
+        border: 1px solid var(--color-primary-border) !important;
+        padding: 0.125rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
     }
 }

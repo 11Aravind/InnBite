@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, LogIn, AlertCircle, Sparkles } from 'lucide-react';
-import { APP_CONFIG } from '../../config';
+import { useSettings } from '../../context/SettingsContext';
+import { ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
     const location = useLocation();
     const { login, loading } = useAuth();
+    const { appName } = useSettings();
+
+    const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
 
     const [usernameOrEmail, setUsernameOrEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const from = location.state?.from?.pathname || '/admin';
+    const defaultFrom = isSuperAdminRoute ? '/superadmin' : '/admin';
+    const from = location.state?.from?.pathname || defaultFrom;
+    const targetRole = isSuperAdminRoute ? 'SUPER_ADMIN' : 'ADMIN';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,7 +28,7 @@ export default function AdminLogin() {
             usernameOrEmail,
             password,
             authProvider: 'PASSWORD',
-            targetRole: 'ADMIN'
+            targetRole
         });
 
         if (res.success) {
@@ -42,14 +47,18 @@ export default function AdminLogin() {
             <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20 relative z-10">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="w-14 h-14 bg-[#114536] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#114536]/20">
-                        <ShieldCheck className="w-7 h-7" />
-                    </div>
+                    {!isSuperAdminRoute && (
+                        <div className="w-14 h-14 bg-[#114536] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#114536]/20">
+                            <ShieldCheck className="w-7 h-7" />
+                        </div>
+                    )}
                     <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                        {APP_CONFIG.APP_NAME} <span className="text-[#114536]">Admin</span> Portal
+                        {appName} <span className="text-[#114536]">{isSuperAdminRoute ? 'Super Admin' : 'Admin'}</span> Portal
                     </h1>
                     <p className="text-slate-500 text-xs mt-1.5 font-medium">
-                        Enter authorized credentials to manage restaurant operations
+                        {isSuperAdminRoute
+                            ? 'Platform configuration & client management console'
+                            : 'Enter authorized credentials to manage restaurant operations'}
                     </p>
                 </div>
 
@@ -61,7 +70,7 @@ export default function AdminLogin() {
                     </div>
                 )}
 
-                {/* Password Form */}
+                {/* Login Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -70,7 +79,7 @@ export default function AdminLogin() {
                         <input
                             type="text"
                             required
-                            placeholder="admin@innbite.com"
+                            placeholder={isSuperAdminRoute ? "Enter username" : "admin@innbite.com"}
                             value={usernameOrEmail}
                             onChange={(e) => setUsernameOrEmail(e.target.value)}
                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#114536] transition-all"
@@ -94,13 +103,13 @@ export default function AdminLogin() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3.5 px-4 btn-primary text-sm shadow-md flex items-center justify-center gap-2 group"
+                        className="w-full py-3.5 px-4 bg-[#114536] hover:bg-[#185544] text-white font-bold rounded-xl text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 group mt-2"
                     >
                         {loading ? (
                             <span>Authenticating...</span>
                         ) : (
                             <>
-                                <span>Sign In as Admin</span>
+                                <span>{isSuperAdminRoute ? 'Sign In as Super Admin' : 'Sign In as Admin'}</span>
                                 <LogIn className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                             </>
                         )}
@@ -110,3 +119,4 @@ export default function AdminLogin() {
         </div>
     );
 }
+

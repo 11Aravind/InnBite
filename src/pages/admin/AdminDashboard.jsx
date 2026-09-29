@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 import { APP_CONFIG } from '../../config';
+import { useSettings } from '../../context/SettingsContext';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
+    const { appName } = useSettings();
     const [orders, setOrders] = useState([]);
     const [settings, setSettings] = useState(null);
     const [dishesCount, setDishesCount] = useState(0);
@@ -76,7 +78,7 @@ export default function AdminDashboard() {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                         Admin Dashboard <TrendingUp className="w-5 h-5 text-themePrimary" />
                     </h1>
-                    <p className="text-xs text-slate-500 mt-0.5">Live metrics and operational control for {APP_CONFIG.APP_NAME} Platform</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Live metrics and operational control for {appName} Platform</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button

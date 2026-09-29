@@ -13,11 +13,13 @@ import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { secureStorage } from '../utils/secureStorage';
 import { APP_CONFIG } from '../config';
+import { useSettings } from '../context/SettingsContext';
 import { Utensils, ChevronRight, Clock, ChefHat, Sparkles } from 'lucide-react';
 import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
 
 export default function Home() {
     const navigate = useNavigate();
+    const { appName, logoUrl } = useSettings();
     const [searchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -177,11 +179,11 @@ export default function Home() {
                         className="text-[#171212] flex size-12 shrink-0 items-center cursor-pointer"
                         onClick={() => navigate('/')}
                     >
-                        <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
+                        <img src={logoUrl || '/logo.svg'} alt={appName} className="w-8 h-8 object-contain rounded-lg" />
                     </div>
                     <div className="flex flex-col items-center flex-1">
                         <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
-                            {APP_CONFIG.APP_NAME}
+                            {appName}
                         </h2>
                         <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

@@ -10,18 +10,80 @@ export const apiService = {
     // RESTAURANT SETTINGS & SERVICE MODE
     // ----------------------------------------------------
     async getRestaurantSettings() {
+        let localFallback = null;
+        try {
+            const stored = localStorage.getItem('innbite_custom_settings');
+            if (stored) localFallback = JSON.parse(stored);
+        } catch (e) {}
+
         const { data, error } = await supabase.from('restaurant_settings').select('*').eq('restaurant_id', 'R001').maybeSingle();
         if (error) {
-            console.error('Supabase settings fetch error:', error);
-            return { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant` };
+            console.warn('Supabase settings fetch error (using fallback settings):', error.message);
+            return {
+                restaurant_id: 'R001',
+                restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant`,
+                app_name: APP_CONFIG.APP_NAME,
+                service_mode: envServiceMode,
+                payment_mode: 'BOTH',
+                theme_color: 'emerald',
+                logo_url: '/logo/innbite-logo.png',
+                ...localFallback
+            };
         }
-        return data ? { ...data, service_mode: envServiceMode } : { service_mode: envServiceMode, restaurant_id: 'R001', restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant` };
+        if (!data) {
+            return {
+                restaurant_id: 'R001',
+                restaurant_name: `${APP_CONFIG.APP_NAME} Restaurant`,
+                app_name: APP_CONFIG.APP_NAME,
+                service_mode: envServiceMode,
+                payment_mode: 'BOTH',
+                theme_color: 'emerald',
+                logo_url: '/logo/innbite-logo.png',
+                ...localFallback
+            };
+        }
+        return {
+            ...data,
+            ...localFallback,
+            service_mode: data.service_mode || localFallback?.service_mode || envServiceMode,
+            payment_mode: data.payment_mode || localFallback?.payment_mode || 'BOTH',
+            app_name: data.app_name || data.restaurant_name || localFallback?.app_name || APP_CONFIG.APP_NAME,
+            theme_color: data.theme_color || localFallback?.theme_color || 'emerald',
+            logo_url: data.logo_url || localFallback?.logo_url || '/logo/innbite-logo.png'
+        };
     },
 
     async updateRestaurantSettings(newSettings) {
-        const { error } = await supabase.from('restaurant_settings').upsert([newSettings]);
-        if (error) throw error;
-        return newSettings;
+        const payload = {
+            restaurant_id: 'R001',
+            ...newSettings
+        };
+
+        // Store immediately in localStorage so state updates instantly across tabs & renders
+        try {
+            localStorage.setItem('innbite_custom_settings', JSON.stringify(payload));
+        } catch (e) {}
+
+        // Attempt Supabase upsert
+        const { error } = await supabase.from('restaurant_settings').upsert([payload]);
+
+        if (error) {
+            console.warn('Supabase upsert warning on restaurant_settings:', error);
+            // Handle missing columns gracefully if migration hasn't been run yet on database
+            if (error.code === 'PGRST204' || error.message?.includes('schema cache')) {
+                // Try upserting basic columns supported by initial schema
+                const basePayload = {
+                    restaurant_id: 'R001',
+                    restaurant_name: payload.app_name || payload.restaurant_name || 'InnBite Restaurant',
+                    service_mode: payload.service_mode || 'TABLE_SERVICE'
+                };
+                await supabase.from('restaurant_settings').upsert([basePayload]);
+            } else {
+                throw error;
+            }
+        }
+
+        return payload;
     },
 
     // ----------------------------------------------------
@@ -66,7 +128,10 @@ export const apiService = {
             if (!matchedUser) return { success: false, error: 'Invalid username/email or password.' };
         }
         
-        if (targetRole && matchedUser.role !== targetRole) return { success: false, error: `Access denied. You do not have ${targetRole} permissions.` };
+        if (targetRole) {
+            const isAllowed = matchedUser.role === targetRole || (targetRole === 'ADMIN' && matchedUser.role === 'SUPER_ADMIN');
+            if (!isAllowed) return { success: false, error: `Access denied. You do not have ${targetRole} permissions.` };
+        }
         if (matchedUser.status === 'DISABLED') return { success: false, error: 'Your account has been disabled. Please contact the administrator.' };
         
         return {

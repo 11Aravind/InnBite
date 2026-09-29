@@ -8,11 +8,21 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
     const location = useLocation();
 
     if (!isAuthenticated) {
-        const loginPath = requiredRole === 'ADMIN' ? '/admin/login' : '/waiter/login';
+        let loginPath = '/admin/login';
+        if (requiredRole === 'SUPER_ADMIN') {
+            loginPath = '/superadmin/login';
+        } else if (requiredRole === 'WAITER') {
+            loginPath = '/waiter/login';
+        }
         return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
-    if (requiredRole && userRole !== requiredRole) {
+    // Allow SUPER_ADMIN to access ADMIN routes if needed, but restrict SUPER_ADMIN routes strictly to SUPER_ADMIN
+    const isAllowed = 
+        userRole === requiredRole ||
+        (requiredRole === 'ADMIN' && userRole === 'SUPER_ADMIN');
+
+    if (requiredRole && !isAllowed) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 max-w-md w-full text-center">
@@ -24,7 +34,7 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
                         You are logged in as <span className="font-semibold capitalize">{userRole?.toLowerCase()}</span>, but this page requires <span className="font-semibold uppercase">{requiredRole}</span> privileges.
                     </p>
                     <a
-                        href={requiredRole === 'ADMIN' ? '/admin/login' : '/waiter/login'}
+                        href={requiredRole === 'SUPER_ADMIN' ? '/superadmin/login' : requiredRole === 'ADMIN' ? '/admin/login' : '/waiter/login'}
                         className="inline-block px-6 py-3 bg-slate-900 text-white font-bold rounded-xl text-sm hover:bg-slate-800 transition-all shadow-md"
                     >
                         Switch Account / Login as {requiredRole}

@@ -491,250 +491,254 @@ export default function AdminDishes() {
                         </div>
 
                         <form onSubmit={handleSaveDish} className="space-y-5">
-                            {/* One Row with 3 Columns: Dish Name, Base Price, Category */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                                        Dish Name <span className="text-rose-500 font-bold ml-0.5">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Margherita Pizza"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-medium"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                                        Base Price (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        placeholder="250.00"
-                                        value={formData.basePrice}
-                                        onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                                        Category <span className="text-rose-500 font-bold ml-0.5">*</span>
-                                    </label>
-                                    <select
-                                        required
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
-                                    >
-                                        <option value="" disabled>-- Select Category --</option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Portion Sizes & Pricing Chip Cards Manager */}
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-bold text-slate-800 block">
-                                        Portion Sizes & Pricing Chips
-                                    </label>
-                                    <span className="text-[10px] text-slate-500 font-semibold">
-                                        Base: ₹{Number(formData.basePrice || 0).toFixed(2)}
-                                    </span>
-                                </div>
-
-                                {/* List of active portion chip cards */}
-                                <div className="flex flex-wrap gap-2">
-                                    {formData.portions && formData.portions.map((p, idx) => {
-                                        const isEditing = editingPortionIdx === idx;
-                                        const calculatedPrice = p.price !== undefined ? Number(p.price).toFixed(2) : (Number(formData.basePrice || 0) * (p.multiplier || 1)).toFixed(2);
-
-                                        if (isEditing) {
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className="bg-emerald-50/70 border border-[#114536]/40 shadow-xs rounded-xl p-1.5 flex items-center gap-1.5 text-xs font-bold animate-fade-in"
-                                                >
-                                                    <span className="text-[#114536] font-extrabold px-1 truncate max-w-[100px]" title={editPortionLabel}>
-                                                        {editPortionLabel}
-                                                    </span>
-                                                    <div className="flex items-center gap-0.5">
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={editPortionPrice}
-                                                            onChange={(e) => setEditPortionPrice(e.target.value)}
-                                                            placeholder="Price"
-                                                            className="w-20 h-7 bg-white border border-slate-300 px-2 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleSaveEditPortion(idx)}
-                                                        className="p-1 bg-[#114536] hover:bg-[#0d372b] text-white rounded-md transition-colors"
-                                                        title="Save Changes"
-                                                    >
-                                                        <Check className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditingPortionIdx(null)}
-                                                        className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
-                                                        title="Cancel"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
-                                            );
-                                        }
-
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className="bg-white border border-slate-200 shadow-2xs rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-slate-800 hover:border-slate-300 transition-all"
-                                            >
-                                                <span className="text-[#114536] font-extrabold">{p.label}</span>
-                                                <span className="text-slate-500 text-[11px] font-semibold bg-slate-100 px-1.5 py-0.5 rounded-md">
-                                                    ₹{calculatedPrice}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleStartEditPortion(idx, p)}
-                                                    className="text-slate-400 hover:text-[#114536] transition-colors ml-0.5"
-                                                    title="Edit portion size and price"
-                                                >
-                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                </button>
-                                                {formData.portions.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const updated = formData.portions.filter((_, i) => i !== idx);
-                                                            setFormData({ ...formData, portions: updated });
-                                                        }}
-                                                        className="text-slate-400 hover:text-rose-600 transition-colors"
-                                                        title="Remove portion size"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Add New Portion Chip Form with Preset Dropdown & Other Option */}
-                                <div className="pt-2 border-t border-slate-200/60 space-y-2">
-                                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                                        <select
-                                            value={selectedPresetPortion}
-                                            onChange={(e) => setSelectedPresetPortion(e.target.value)}
-                                            className="w-48 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-bold outline-none focus:border-[#114536]"
-                                        >
-                                            {['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack']
-                                                .filter(label => !formData.portions?.some(p => p.label.toLowerCase() === label.toLowerCase()))
-                                                .map(label => (
-                                                    <option key={label} value={label}>{label}</option>
-                                                ))
-                                            }
-                                            <option value="Other">Other (Custom Size)...</option>
-                                        </select>
-
-                                        {selectedPresetPortion === 'Other' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* Left Column: Basic Details & Portions */}
+                                <div className="lg:col-span-7 space-y-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                                                Dish Name <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                            </label>
                                             <input
                                                 type="text"
-                                                placeholder="Enter custom size..."
-                                                value={customPortionLabel}
-                                                onChange={(e) => setCustomPortionLabel(e.target.value)}
-                                                className="flex-1 min-w-[140px] h-9 bg-white border border-slate-200 px-3 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                                required
+                                                placeholder="e.g. Margherita Pizza"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-medium"
                                             />
-                                        )}
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                                                Base Price (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                placeholder="250.00"
+                                                value={formData.basePrice}
+                                                onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                                                className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
+                                            />
+                                        </div>
+                                    </div>
 
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            placeholder="Price (e.g. 150)"
-                                            value={portionPrice}
-                                            onChange={(e) => setPortionPrice(e.target.value)}
-                                            className="w-32 h-9 bg-white border border-slate-200 px-2.5 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
-                                        />
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                                            Category <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                        </label>
+                                        <select
+                                            required
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                            className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
+                                        >
+                                            <option value="" disabled>-- Select Category --</option>
+                                            {categories.map((c) => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
-                                                if (!finalLabel) return;
-                                                
-                                                if (formData.portions?.some(p => p.label.toLowerCase() === finalLabel.toLowerCase())) {
-                                                    toast.error(`"${finalLabel}" size already exists!`);
-                                                    return;
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-slate-800 block">
+                                                Portion Sizes & Pricing Chips
+                                            </label>
+                                            <span className="text-[10px] text-slate-500 font-semibold">
+                                                Base: ₹{Number(formData.basePrice || 0).toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {formData.portions && formData.portions.map((p, idx) => {
+                                                const isEditing = editingPortionIdx === idx;
+                                                const calculatedPrice = p.price !== undefined ? Number(p.price).toFixed(2) : (Number(formData.basePrice || 0) * (p.multiplier || 1)).toFixed(2);
+
+                                                if (isEditing) {
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className="bg-emerald-50/70 border border-[#114536]/40 shadow-xs rounded-xl p-1.5 flex items-center gap-1.5 text-xs font-bold animate-fade-in"
+                                                        >
+                                                            <span className="text-[#114536] font-extrabold px-1 truncate max-w-[100px]" title={editPortionLabel}>
+                                                                {editPortionLabel}
+                                                            </span>
+                                                            <div className="flex items-center gap-0.5">
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={editPortionPrice}
+                                                                    onChange={(e) => setEditPortionPrice(e.target.value)}
+                                                                    placeholder="Price"
+                                                                    className="w-20 h-7 bg-white border border-slate-300 px-2 rounded-md text-xs font-bold outline-none focus:border-[#114536] text-slate-900"
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSaveEditPortion(idx)}
+                                                                className="p-1 bg-[#114536] hover:bg-[#0d372b] text-white rounded-md transition-colors"
+                                                            >
+                                                                <Check className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingPortionIdx(null)}
+                                                                className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    );
                                                 }
 
-                                                let defaultPrice = Number(portionPrice) || Number(formData.basePrice) || 0;
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className="bg-white border border-slate-200 shadow-2xs rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-slate-800 hover:border-slate-300 transition-all"
+                                                    >
+                                                        <span className="text-[#114536] font-extrabold">{p.label}</span>
+                                                        <span className="text-slate-500 text-[11px] font-semibold bg-slate-100 px-1.5 py-0.5 rounded-md">
+                                                            ₹{calculatedPrice}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleStartEditPortion(idx, p)}
+                                                            className="text-slate-400 hover:text-[#114536] transition-colors ml-0.5"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        {formData.portions.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const updated = formData.portions.filter((_, i) => i !== idx);
+                                                                    setFormData({ ...formData, portions: updated });
+                                                                }}
+                                                                className="text-slate-400 hover:text-rose-600 transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
 
-                                                const newChip = {
-                                                    value: finalLabel.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-                                                    label: finalLabel,
-                                                    price: defaultPrice
-                                                };
+                                        <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                                            <div className="flex items-center gap-2 w-full">
+                                                <select
+                                                    value={selectedPresetPortion}
+                                                    onChange={(e) => setSelectedPresetPortion(e.target.value)}
+                                                    className={`${selectedPresetPortion === 'Other' ? 'w-[100px]' : 'flex-1'} shrink-0 h-9 bg-white border border-slate-200 px-2 rounded-lg text-xs font-bold outline-none focus:border-[#114536] truncate`}
+                                                >
+                                                    {['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack']
+                                                        .filter(label => !formData.portions?.some(p => p.label.toLowerCase() === label.toLowerCase()))
+                                                        .map(label => (
+                                                            <option key={label} value={label}>{label}</option>
+                                                        ))
+                                                    }
+                                                    <option value="Other">Other...</option>
+                                                </select>
 
-                                                setFormData({
-                                                    ...formData,
-                                                    portions: [...(formData.portions || []), newChip]
-                                                });
-                                                setCustomPortionLabel('');
-                                                setPortionPrice('');
-                                            }}
-                                            className="h-9 px-4 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" /> Add Chip
-                                        </button>
+                                                {selectedPresetPortion === 'Other' && (
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Custom..."
+                                                        value={customPortionLabel}
+                                                        onChange={(e) => setCustomPortionLabel(e.target.value)}
+                                                        className="flex-1 min-w-0 h-9 bg-white border border-slate-200 px-2 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                                    />
+                                                )}
+
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="Price..."
+                                                    value={portionPrice}
+                                                    onChange={(e) => setPortionPrice(e.target.value)}
+                                                    className="w-20 sm:w-24 shrink-0 h-9 bg-white border border-slate-200 px-2 rounded-lg text-xs font-medium outline-none focus:border-[#114536]"
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
+                                                        if (!finalLabel) return;
+                                                        
+                                                        if (formData.portions?.some(p => p.label.toLowerCase() === finalLabel.toLowerCase())) {
+                                                            toast.error(`"${finalLabel}" size already exists!`);
+                                                            return;
+                                                        }
+
+                                                        let defaultPrice = Number(portionPrice) || Number(formData.basePrice) || 0;
+
+                                                        const newChip = {
+                                                            value: finalLabel.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                                                            label: finalLabel,
+                                                            price: defaultPrice
+                                                        };
+
+                                                        setFormData({
+                                                            ...formData,
+                                                            portions: [...(formData.portions || []), newChip]
+                                                        });
+                                                        setCustomPortionLabel('');
+                                                        setPortionPrice('');
+                                                    }}
+                                                    className="h-9 px-4 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5" /> Add Chip
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-                                <label className="text-xs font-bold text-slate-800 block">Dish Images (Max 3)</label>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {[0, 1, 2].map((idx) => {
-                                        // Only show the next input if previous is filled
-                                        if (idx > 0 && (!formData.images || idx > formData.images.length)) return null;
-                                        
-                                        return (
-                                            <div key={idx} className="relative">
-                                                <ImageFileInput
-                                                    value={formData.images?.[idx] || ''}
-                                                    onChange={(croppedImg) => {
-                                                        const newImages = [...(formData.images || [])];
-                                                        newImages[idx] = croppedImg;
-                                                        setFormData({ ...formData, images: newImages });
-                                                    }}
-                                                    label={idx === 0 ? "Primary Image (Required)" : `Additional Image ${idx + 1}`}
-                                                    aspect={4 / 3}
-                                                    required={idx === 0}
-                                                />
-                                                {idx > 0 && formData.images?.[idx] && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const newImages = formData.images.filter((_, i) => i !== idx);
-                                                            setFormData({ ...formData, images: newImages });
-                                                        }}
-                                                        className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-md hover:bg-rose-600 transition-colors z-10"
-                                                        title="Remove Image"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                {/* Right Column: Dish Images */}
+                                <div className="lg:col-span-5">
+                                    <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 h-full">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-xs font-bold text-slate-800">Dish Images (Max 3)</label>
+                                            <span className="text-[10px] font-semibold text-slate-500">{formData.images?.length || 0}/3 uploaded</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[0, 1, 2].map((idx) => {
+                                                // Only show the next input if previous is filled
+                                                if (idx > 0 && (!formData.images || idx > formData.images.length)) return null;
+                                                
+                                                return (
+                                                    <div key={idx} className={`relative ${idx === 0 ? 'col-span-2' : 'col-span-1'}`}>
+                                                        <ImageFileInput
+                                                            value={formData.images?.[idx] || ''}
+                                                            onChange={(croppedImg) => {
+                                                                const newImages = [...(formData.images || [])];
+                                                                newImages[idx] = croppedImg;
+                                                                setFormData({ ...formData, images: newImages });
+                                                            }}
+                                                            label={idx === 0 ? "Primary Image (Required)" : `Additional Image ${idx + 1}`}
+                                                            aspect={4 / 3}
+                                                            required={idx === 0}
+                                                        />
+                                                        {idx > 0 && formData.images?.[idx] && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newImages = formData.images.filter((_, i) => i !== idx);
+                                                                    setFormData({ ...formData, images: newImages });
+                                                                }}
+                                                                className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-md hover:bg-rose-600 transition-colors z-10"
+                                                                title="Remove Image"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -748,26 +752,28 @@ export default function AdminDishes() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Preparation Details</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="e.g. Hand-tossed pizza dough topped with San Marzano tomatoes, fresh mozzarella..."
-                                    value={formData.preparation}
-                                    onChange={(e) => setFormData({ ...formData, preparation: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
-                                />
-                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">Preparation Details</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="e.g. Hand-tossed pizza dough topped with San Marzano tomatoes..."
+                                        value={formData.preparation}
+                                        onChange={(e) => setFormData({ ...formData, preparation: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Ingredients (comma-separated for display only)</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="e.g. Pasta, Carrots, Zucchini, Bell Peppers, Cream..."
-                                    value={formData.ingredientsList || ''}
-                                    onChange={(e) => setFormData({ ...formData, ingredientsList: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
-                                />
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">Ingredients (comma-separated for display only)</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="e.g. Pasta, Carrots, Zucchini, Bell Peppers, Cream..."
+                                        value={formData.ingredientsList || ''}
+                                        onChange={(e) => setFormData({ ...formData, ingredientsList: e.target.value })}
+                                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900"
+                                    />
+                                </div>
                             </div>
 
                             {/* Ingredient Customizations Options Manager */}

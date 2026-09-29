@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from 'react-use-cart';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import NetworkStatusBanner from './components/NetworkStatusBanner';
 
@@ -28,6 +29,8 @@ const AdminWaiters = lazy(() => import('./pages/admin/AdminWaiters'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+
 import { APP_CONFIG } from './config';
 
 const PageLoadingFallback = () => (
@@ -43,62 +46,78 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <CartProvider>
-          <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
-          <NetworkStatusBanner />
-          <Suspense fallback={<PageLoadingFallback />}>
-            <Routes>
-              {/* Customer QR Scan & Menu Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/table/:tableId" element={<QRHandler />} />
-              <Route path="/qr/common" element={<QRHandler />} />
-              <Route path="/qr/:qrCode" element={<QRHandler />} />
-              <Route path="/FoodDetails/:foodId" element={<FoodDetails />} />
-              <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
-              <Route path="/cart" element={<Cart />} />
+        <SettingsProvider>
+          <CartProvider>
+            <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
+            <NetworkStatusBanner />
+            <Suspense fallback={<PageLoadingFallback />}>
+              <Routes>
+                {/* Customer QR Scan & Menu Routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/table/:tableId" element={<QRHandler />} />
+                <Route path="/qr/common" element={<QRHandler />} />
+                <Route path="/qr/:qrCode" element={<QRHandler />} />
+                <Route path="/FoodDetails/:foodId" element={<FoodDetails />} />
+                <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
+                <Route path="/cart" element={<Cart />} />
 
-              {/* Waiter Application Routes (Authenticated) */}
-              <Route path="/waiter/login" element={<WaiterLogin />} />
-              <Route
-                path="/waiter"
-                element={
-                  <ProtectedRoute requiredRole="WAITER">
-                    <KitchenView />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/kitchen"
-                element={
-                  <ProtectedRoute requiredRole="WAITER">
-                    <KitchenView />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Waiter Application Routes (Authenticated) */}
+                <Route path="/waiter/login" element={<WaiterLogin />} />
+                <Route
+                  path="/waiter"
+                  element={
+                    <ProtectedRoute requiredRole="WAITER">
+                      <KitchenView />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/kitchen"
+                  element={
+                    <ProtectedRoute requiredRole="WAITER">
+                      <KitchenView />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Admin Portal Authentication */}
-              <Route path="/admin/login" element={<AdminLogin />} />
+                {/* Restaurant Admin Portal Authentication */}
+                <Route path="/admin/login" element={<AdminLogin />} />
 
-              {/* Admin Management Portal (Protected) */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRole="ADMIN">
-                    <AdminLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<AdminDashboard />} />
-                <Route path="dishes" element={<AdminDishes />} />
-                <Route path="categories" element={<AdminCategories />} />
-                <Route path="banners" element={<AdminBanners />} />
-                <Route path="tables" element={<AdminTables />} />
-                <Route path="waiters" element={<AdminWaiters />} />
-                <Route path="orders" element={<AdminOrders />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </CartProvider>
+                {/* Restaurant Admin Portal (Protected for Restaurant Client) */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requiredRole="ADMIN">
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="dishes" element={<AdminDishes />} />
+                  <Route path="categories" element={<AdminCategories />} />
+                  <Route path="banners" element={<AdminBanners />} />
+                  <Route path="tables" element={<AdminTables />} />
+                  <Route path="waiters" element={<AdminWaiters />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                </Route>
+
+                {/* Super Admin Platform Owner Portal (Protected strictly for Platform Developer/SaaS Owner) */}
+                <Route path="/superadmin/login" element={<AdminLogin />} />
+                <Route
+                  path="/superadmin"
+                  element={
+                    <ProtectedRoute requiredRole="SUPER_ADMIN">
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<SuperAdminDashboard />} />
+                  <Route path="admins" element={<AdminWaiters />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </CartProvider>
+        </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   );
