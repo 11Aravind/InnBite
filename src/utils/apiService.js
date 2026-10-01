@@ -1,9 +1,27 @@
 import { supabase } from './supabase';
 import { APP_CONFIG } from '../config';
+import { secureStorage } from './secureStorage';
 
 const envServiceMode = import.meta.env.VITE_SERVICE_MODE || 'TABLE_SERVICE';
 
-// Admin accounts are now fetched directly from Supabase 'admins' table
+// In-Memory High Performance Cache for Instant Page Transitions
+const CACHE_TTL_MS = 60000; // 60s cache
+const menuCache = {
+    homeData: null,
+    homeDataTime: 0,
+    categories: null,
+    categoriesTime: 0,
+    dishes: null,
+    dishesTime: 0,
+    dishMap: new Map() // id -> { data, timestamp }
+};
+
+export const invalidateMenuCache = () => {
+    menuCache.homeData = null;
+    menuCache.categories = null;
+    menuCache.dishes = null;
+    menuCache.dishMap.clear();
+};
 
 export const apiService = {
     // ----------------------------------------------------
@@ -12,9 +30,11 @@ export const apiService = {
     async getRestaurantSettings() {
         let localFallback = null;
         try {
-            const stored = localStorage.getItem('innbite_custom_settings');
-            if (stored) localFallback = JSON.parse(stored);
-        } catch (e) {}
+            const stored = secureStorage.getItem('innbite_custom_settings');
+            if (stored) localFallback = typeof stored === 'string' ? JSON.parse(stored) : stored;
+        } catch {
+            // Ignore storage fallback error
+        }
 
         const { data, error } = await supabase.from('restaurant_settings').select('*').eq('restaurant_id', 'R001').maybeSingle();
         if (error) {
@@ -26,7 +46,7 @@ export const apiService = {
                 service_mode: envServiceMode,
                 payment_mode: 'BOTH',
                 theme_color: 'emerald',
-                logo_url: '/logo/innbite-logo.png',
+                logo_url: '/logo.svg',
                 ...localFallback
             };
         }
@@ -38,7 +58,7 @@ export const apiService = {
                 service_mode: envServiceMode,
                 payment_mode: 'BOTH',
                 theme_color: 'emerald',
-                logo_url: '/logo/innbite-logo.png',
+                logo_url: '/logo.svg',
                 ...localFallback
             };
         }
@@ -49,7 +69,7 @@ export const apiService = {
             payment_mode: data.payment_mode || localFallback?.payment_mode || 'BOTH',
             app_name: data.app_name || data.restaurant_name || localFallback?.app_name || APP_CONFIG.APP_NAME,
             theme_color: data.theme_color || localFallback?.theme_color || 'emerald',
-            logo_url: data.logo_url || localFallback?.logo_url || '/logo/innbite-logo.png'
+            logo_url: data.logo_url || localFallback?.logo_url || '/logo.svg'
         };
     },
 
@@ -59,10 +79,12 @@ export const apiService = {
             ...newSettings
         };
 
-        // Store immediately in localStorage so state updates instantly across tabs & renders
+        // Store immediately in encrypted secureStorage so state updates instantly across tabs & renders securely
         try {
-            localStorage.setItem('innbite_custom_settings', JSON.stringify(payload));
-        } catch (e) {}
+            secureStorage.setItem('innbite_custom_settings', payload);
+        } catch {
+            // Ignore storage write error
+        }
 
         // Attempt Supabase upsert
         const { error } = await supabase.from('restaurant_settings').upsert([payload]);
@@ -181,46 +203,89 @@ export const apiService = {
     },
 
     // ----------------------------------------------------
-    // READ MENU DATA
+    // READ MENU DATA (High Speed Cached)
     // ----------------------------------------------------
-    async getHomePageData() {
+    async getHomePageData(forceRefresh = false) {
+        const now = Date.now();
+        if (!forceRefresh && menuCache.homeData && (now - menuCache.homeDataTime < CACHE_TTL_MS)) {
+            return menuCache.homeData;
+        }
+
         const [bannersRes, dishesRes, categoriesRes, settings] = await Promise.all([
             supabase.from('banners').select('*'),
-            supabase.from('dishes').select('*').eq('is_available', true),
+            supabase.from('dishes').select('*'),
             supabase.from('categories').select('*').order('display_order', { ascending: true }),
             this.getRestaurantSettings()
         ]);
-        
+
         const banners = bannersRes.data || [];
         const allDishes = dishesRes.data || [];
         const categories = categoriesRes.data || [];
-        
-        return {
+
+        // Pre-fill dish map & cache
+        menuCache.dishes = allDishes;
+        menuCache.dishesTime = now;
+        allDishes.forEach(d => menuCache.dishMap.set(d.id, { data: d, timestamp: now }));
+
+        menuCache.categories = categories;
+        menuCache.categoriesTime = now;
+
+        const result = {
             banners,
+            all_dishes: allDishes,
             popular_dishes: allDishes.filter(d => (d.is_popular || d.isPopular) && d.is_available !== false),
             todays_specials: allDishes.filter(d => (d.is_special || d.isSpecial) && d.is_available !== false),
             categories,
             settings
         };
+
+        menuCache.homeData = result;
+        menuCache.homeDataTime = now;
+        return result;
     },
 
     async getCategories() {
+        const now = Date.now();
+        if (menuCache.categories && (now - menuCache.categoriesTime < CACHE_TTL_MS)) {
+            return menuCache.categories;
+        }
         const { data, error } = await supabase.from('categories').select('*').order('display_order', { ascending: true });
         if (error) throw error;
-        return data || [];
+        const categories = data || [];
+        menuCache.categories = categories;
+        menuCache.categoriesTime = now;
+        return categories;
     },
 
     async getDishes(categoryId = null) {
+        const now = Date.now();
+        if (!categoryId && menuCache.dishes && (now - menuCache.dishesTime < CACHE_TTL_MS)) {
+            return menuCache.dishes;
+        }
         let query = supabase.from('dishes').select('*');
         if (categoryId) query = query.eq('category_id', categoryId);
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        const dishes = data || [];
+        if (!categoryId) {
+            menuCache.dishes = dishes;
+            menuCache.dishesTime = now;
+            dishes.forEach(d => menuCache.dishMap.set(d.id, { data: d, timestamp: now }));
+        }
+        return dishes;
     },
 
     async getDishById(id) {
+        if (!id) return null;
+        const cached = menuCache.dishMap.get(id);
+        if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+            return cached.data;
+        }
         const { data, error } = await supabase.from('dishes').select('*').eq('id', id).maybeSingle();
         if (error) throw error;
+        if (data) {
+            menuCache.dishMap.set(id, { data, timestamp: Date.now() });
+        }
         return data;
     },
 
@@ -359,6 +424,7 @@ export const apiService = {
     // DISH & CATEGORY & BANNER CRUD
     // ----------------------------------------------------
     async saveDish(dishPayload) {
+        invalidateMenuCache();
         const base_price = Number(dishPayload.basePrice || dishPayload.base_price || 0);
         const supabasePayload = {
             id: dishPayload.id || dishPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4),
@@ -383,12 +449,29 @@ export const apiService = {
     },
 
     async deleteDish(dishId) {
+        invalidateMenuCache();
         const { error } = await supabase.from('dishes').delete().eq('id', dishId);
         if (error) throw error;
         return true;
     },
 
+    async toggleDishAvailability(dishId, isAvailable) {
+        invalidateMenuCache();
+        const { data, error } = await supabase
+            .from('dishes')
+            .update({ is_available: isAvailable })
+            .eq('id', dishId)
+            .select()
+            .single();
+        if (error) {
+            console.error('Error updating stock status in Supabase:', error);
+            throw error;
+        }
+        return data;
+    },
+
     async saveCategory(categoryPayload) {
+        invalidateMenuCache();
         const supabasePayload = {
             id: categoryPayload.id || categoryPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4),
             name: categoryPayload.name,
@@ -401,12 +484,14 @@ export const apiService = {
     },
 
     async deleteCategory(categoryId) {
+        invalidateMenuCache();
         const { error } = await supabase.from('categories').delete().eq('id', categoryId);
         if (error) throw error;
         return true;
     },
 
     async saveBanner(bannerPayload) {
+        invalidateMenuCache();
         const supabasePayload = {
             id: bannerPayload.id || 'banner-' + Date.now(),
             title: bannerPayload.title,
@@ -419,6 +504,7 @@ export const apiService = {
     },
 
     async deleteBanner(bannerId) {
+        invalidateMenuCache();
         const { error } = await supabase.from('banners').delete().eq('id', bannerId);
         if (error) throw error;
         return true;

@@ -51,3 +51,5 @@ export const playOrderChimeSound = () => {
         console.warn('Order chime audio playback error:', e);
     }
 };
+
+export const playNotificationSound = playOrderChimeSound;

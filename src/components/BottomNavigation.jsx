@@ -4,15 +4,25 @@ import { useNavigate, useLocation } from 'react-router-dom';
 export default function BottomNavigation() {
     const navigate = useNavigate();
     const location = useLocation();
+    const isHome = location.pathname === '/';
+    const isCart = location.pathname === '/cart';
+
+    const handleHomeClick = (e) => {
+        e.preventDefault();
+        navigate('/');
+    };
+
     const handleCartClick = (e) => {
-        e.preventDefault(); // Prevent default anchor behavior
+        e.preventDefault();
         navigate('/cart');
     };
+
     return (
-        <div className="flex gap-2 border-t border-[#f4f1f1] bg-white px-4 pb-2 pt-2 fixed bottom-0 left-0 right-0">
+        <div className="flex gap-2 border-t border-[#f4f1f1] bg-white px-4 pb-2 pt-2 fixed bottom-0 left-0 right-0 z-40">
             <a
-                className="just flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-[#171212]"
-                href="#"
+                className={`flex flex-1 flex-col items-center justify-end gap-1 rounded-full ${isHome ? 'text-[#114536]' : 'text-[#82686a]'}`}
+                href="/"
+                onClick={handleHomeClick}
             >
                 <div
                     className="text-[#171212] flex h-8 items-center justify-center"
@@ -35,9 +45,9 @@ export default function BottomNavigation() {
                 </p>
             </a>
             <a
-                className="just flex flex-1 flex-col items-center justify-end gap-1 text-[#82686a]"
-                href="#"
-                onClick={handleCartClick} // Add onClick handler
+                className={`flex flex-1 flex-col items-center justify-end gap-1 ${isCart ? 'text-[#114536]' : 'text-[#82686a]'}`}
+                href="/cart"
+                onClick={handleCartClick}
             >
                 <div
                     className="text-[#82686a] flex h-8 items-center justify-center"

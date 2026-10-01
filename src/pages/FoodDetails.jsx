@@ -12,7 +12,7 @@ import { useSettings } from '../context/SettingsContext';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
-    const { appName } = useSettings();
+    const { appName, settings } = useSettings();
     const { foodId } = useParams();
     const { addItem, totalUniqueItems } = useCart();
 
@@ -22,19 +22,13 @@ const FoodDetails = () => {
     const [selectedPortion, setSelectedPortion] = useState(null);
 
     // Customization State
-    const [ingredientOptions, setIngredientOptions] = useState({});
     const [specialInstruction, setSpecialInstruction] = useState('');
-
-    const [settings, setSettings] = useState(null);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         setLoading(true);
-        Promise.all([
-            apiService.getDishById(foodId),
-            apiService.getRestaurantSettings()
-        ])
-            .then(([data, settingsData]) => {
+        apiService.getDishById(foodId)
+            .then((data) => {
                 if (data) {
                     setFoodData(data);
                     const defaultPortion = (data.portions && data.portions.length > 0)
@@ -42,11 +36,8 @@ const FoodDetails = () => {
                         : "regular";
                     setSelectedPortion(defaultPortion);
                 }
-                if (settingsData) {
-                    setSettings(settingsData);
-                }
             })
-            .catch(err => console.error('Error fetching data:', err))
+            .catch(err => console.error('Error fetching dish details:', err))
             .finally(() => setLoading(false));
     }, [foodId]);
 
@@ -103,23 +94,8 @@ const FoodDetails = () => {
         navigate(-1);
     };
 
-    const handleIngredientChange = (name, level) => {
-        setIngredientOptions(prev => ({
-            ...prev,
-            [name]: level
-        }));
-    };
-
     const handleAddToCart = () => {
-        // Filter out normal options to keep customizations clean
-        const activeCustomizations = {};
-        Object.entries(ingredientOptions).forEach(([key, val]) => {
-            if (val !== 'Normal') {
-                activeCustomizations[key] = val;
-            }
-        });
-
-        const customHash = JSON.stringify(activeCustomizations) + '_' + specialInstruction.trim();
+        const customHash = specialInstruction.trim();
         const uniqueCartItemId = `${foodData.id}-${selectedPortion || 'reg'}-${customHash.replace(/[^a-zA-Z0-9]/g, '')}`;
 
         addItem(
@@ -130,7 +106,6 @@ const FoodDetails = () => {
                 price: Number(price),
                 image: images[0],
                 portion: portionObj.label,
-                customizations: activeCustomizations,
                 special_instruction: specialInstruction.trim(),
                 specialInstruction: specialInstruction.trim()
             },
@@ -211,9 +186,23 @@ const FoodDetails = () => {
                 )}
 
                 {/* Title & Price */}
-                <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 text-left pb-3 pt-5">
-                    {foodData.name}
-                </h1>
+                <div className="flex items-center justify-between px-4 pb-1 pt-5 flex-wrap gap-2">
+                    <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] text-left">
+                        {foodData.name}
+                    </h1>
+                    {foodData?.is_available === false && (
+                        <span className="bg-rose-100 text-rose-800 text-xs font-black uppercase px-2.5 py-1 rounded-full border border-rose-200">
+                            Out of Stock
+                        </span>
+                    )}
+                </div>
+
+                {foodData?.is_available === false && (
+                    <div className="mx-4 my-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold leading-relaxed">
+                        ⚠️ This item is currently out of stock and unavailable for ordering.
+                    </div>
+                )}
+
                 <p className="text-[#836c67] text-sm font-normal leading-normal pb-3 pt-1 px-4">
                     ₹{price}
                 </p>
@@ -334,15 +323,25 @@ const FoodDetails = () => {
                     <button
                         type="button"
                         onClick={handleAddToCart}
-                        disabled={settings?.is_closed}
-                        className={`flex flex-1 max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-transform ${settings?.is_closed ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#edc3ba] text-[#171312] active:scale-95'}`}
+                        disabled={settings?.is_closed || foodData?.is_available === false}
+                        className={`flex flex-1 max-w-[480px] items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-transform ${
+                            settings?.is_closed || foodData?.is_available === false
+                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                : 'bg-[#edc3ba] text-[#171312] active:scale-95 cursor-pointer'
+                        }`}
                     >
-                        {!settings?.is_closed && (
+                        {!settings?.is_closed && foodData?.is_available !== false && (
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
+                                <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
                             </svg>
                         )}
-                        <span className="truncate">{settings?.is_closed ? 'Shop is Closed' : 'Add Item'}</span>
+                        <span className="truncate">
+                            {settings?.is_closed
+                                ? 'Shop is Closed'
+                                : foodData?.is_available === false
+                                    ? 'Out of Stock'
+                                    : 'Add Item'}
+                        </span>
                     </button>
                 </div>
             </div>

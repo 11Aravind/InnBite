@@ -10,13 +10,15 @@ import {
     Trash2,
     Image as ImageIcon,
     X,
-    Link as LinkIcon
+    Link as LinkIcon,
+    RefreshCw
 } from 'lucide-react';
 
 export default function AdminBanners() {
     const [banners, setBanners] = useState([]);
     const [dishes, setDishes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBanner, setEditingBanner] = useState(null);
 
@@ -62,6 +64,7 @@ export default function AdminBanners() {
             return;
         }
 
+        setIsSaving(true);
         try {
             await apiService.saveBanner({
                 id: editingBanner?.id,
@@ -78,6 +81,8 @@ export default function AdminBanners() {
         } catch (err) {
             console.error('Save banner error:', err);
             toast.error(err.message || 'Failed to save banner.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -136,13 +141,14 @@ export default function AdminBanners() {
         },
         {
             accessorKey: 'dish_id',
-            header: 'Link Target URL',
+            header: 'Link Target / Dish',
             cell: ({ row }) => {
                 const b = row.original;
+                const targetName = getLinkedDishName(b.dish_id);
                 return b.dish_id ? (
                     <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg border border-amber-200 font-bold text-xs inline-flex items-center gap-1.5 truncate max-w-[200px]" title={b.dish_id}>
                         <LinkIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span className="truncate">{b.dish_id}</span>
+                        <span className="truncate">{targetName}</span>
                     </span>
                 ) : (
                     <span className="text-slate-400 italic">No link</span>
@@ -255,7 +261,20 @@ export default function AdminBanners() {
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Banner</button>
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="w-1/2 h-11 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Saving Banner...</span>
+                                        </>
+                                    ) : (
+                                        <span>Save Banner</span>
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>

@@ -104,16 +104,34 @@ export default function Home() {
 
     useEffect(() => {
         setApiLoading(true);
-        Promise.all([
-            apiService.getHomePageData(),
-            apiService.getDishes()
-        ])
-            .then(([data, dishes]) => {
-                if (data) setHomeData(data);
-                if (dishes) setAllDishes(dishes);
+        apiService.getHomePageData()
+            .then((data) => {
+                if (data) {
+                    setHomeData(data);
+                    setAllDishes(data.all_dishes || data.popular_dishes || []);
+                }
             })
             .catch((err) => console.error('Data load error:', err))
             .finally(() => setApiLoading(false));
+
+        let subscription;
+        if (isSupabaseConfigured && supabase) {
+            subscription = supabase
+                .channel('home_dishes_realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, () => {
+                    apiService.getHomePageData(true).then((data) => {
+                        if (data) {
+                            setHomeData({ ...data });
+                            setAllDishes(data.all_dishes || data.popular_dishes || []);
+                        }
+                    });
+                })
+                .subscribe();
+        }
+
+        return () => {
+            if (subscription) supabase.removeChannel(subscription);
+        };
     }, []);
 
     // Debounce search
@@ -340,6 +358,7 @@ export default function Home() {
                                             name={dish.name}
                                             price={dish.basePrice || dish.base_price}
                                             description={dish.description}
+                                            isAvailable={dish.is_available !== false}
                                         />
                                     ))
                                 )}
@@ -371,6 +390,7 @@ export default function Home() {
                                             name={item.name}
                                             price={item.basePrice || item.base_price}
                                             description={item.description}
+                                            isAvailable={item.is_available !== false}
                                         />
                                     ))
                                 )}

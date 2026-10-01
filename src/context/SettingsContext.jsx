@@ -181,7 +181,7 @@ export function SettingsProvider({ children }) {
         service_mode: 'TABLE_SERVICE',
         payment_mode: 'BOTH',
         theme_color: 'emerald',
-        logo_url: '/logo/innbite-logo.png',
+        logo_url: '/logo.svg',
         is_closed: false
     });
     const [loading, setLoading] = useState(true);
@@ -196,7 +196,7 @@ export function SettingsProvider({ children }) {
                     payment_mode: data.payment_mode || 'BOTH',
                     service_mode: data.service_mode || 'TABLE_SERVICE',
                     theme_color: data.theme_color || 'emerald',
-                    logo_url: data.logo_url || '/logo/innbite-logo.png'
+                    logo_url: data.logo_url || '/logo.svg'
                 };
                 setSettings(merged);
                 applyThemeAndBranding(merged);
@@ -266,7 +266,7 @@ export function SettingsProvider({ children }) {
 
     const themePreset = resolveTheme(settings.theme_color);
     const appName = settings.app_name || settings.restaurant_name || 'InnBite';
-    const logoUrl = settings.logo_url || '/logo/innbite-logo.png';
+    const logoUrl = settings.logo_url || '/logo.svg';
 
     return (
         <SettingsContext.Provider

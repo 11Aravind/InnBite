@@ -346,11 +346,21 @@ export default function KitchenView() {
                                     </div>
                                 </div>
 
-                                {/* Workflow Action Buttons */}
                                 <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
                                     <div>
                                         <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Amount</span>
-                                        <span className="text-base font-black text-[#114536]">₹{Number(order.total_amount || 0).toFixed(2)}</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-base font-black text-[#114536]">₹{Number(order.total_amount || 0).toFixed(2)}</span>
+                                            {order.payment_status !== 'SUCCESS' && order.payment_status !== 'paid' && (
+                                                <button
+                                                    onClick={() => handleMarkPaid(order.id)}
+                                                    className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded text-[10px] font-extrabold cursor-pointer"
+                                                    title="Mark Order Payment as Paid"
+                                                >
+                                                    Mark Paid
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="flex gap-1.5">

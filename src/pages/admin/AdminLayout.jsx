@@ -61,7 +61,7 @@ export default function AdminLayout() {
                     {/* Brand Header */}
                     <div className="p-6 border-b border-sidebar flex items-center justify-between">
                         <div className="flex items-center gap-3.5">
-                            <img src={logoUrl || 'logo/innbite-logo.png'} alt={appName} className="w-9 h-9 object-contain shrink-0 rounded-lg bg-white/10 p-1" />
+                            <img src={logoUrl || '/logo.svg'} alt={appName} className="w-9 h-9 object-contain shrink-0 rounded-lg bg-white/10 p-1" />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
                                     {appName} <span className="text-[10px] uppercase font-bold bg-sidebar-active text-white px-1.5 py-0.5 rounded-md border border-sidebar-active">{portalTitle}</span>

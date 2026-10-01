@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { ChefHat, Check, Clock, CreditCard, X, RefreshCw, Sparkles, UtensilsCrossed, FileText, MessageSquare } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
@@ -62,7 +61,7 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
             clearInterval(interval);
             if (subscription) supabase.removeChannel(subscription);
         };
-    }, [order?.id]);
+    }, [order?.id, disableSubscription, onClose]);
 
     if (!order) return null;
 

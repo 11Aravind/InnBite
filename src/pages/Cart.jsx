@@ -6,9 +6,11 @@ import { apiService } from '../utils/apiService';
 import { getOrCreateCustomerSession } from '../utils/session';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
-import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle, Store, CheckCircle2 } from 'lucide-react';
+import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle, Store, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
 import { useSettings } from '../context/SettingsContext';
+import { supabase, isSupabaseConfigured } from '../utils/supabase';
+import { toast } from 'react-hot-toast';
 
 export default function Cart() {
     const navigate = useNavigate();
@@ -51,6 +53,45 @@ export default function Cart() {
     const [checkoutError, setCheckoutError] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('online');
 
+    // Live Stock Availability State for items in Cart
+    const [unavailableItemIds, setUnavailableItemIds] = useState(new Set());
+
+    const checkCartStockAvailability = async () => {
+        if (isEmpty) return;
+        try {
+            const dishes = await apiService.getDishes();
+            const dishMap = new Map((dishes || []).map(d => [d.id, d]));
+            const unavailSet = new Set();
+            for (const item of items) {
+                const rawId = item.dish_id || item.id;
+                const dbDish = dishMap.get(rawId);
+                if (dbDish && dbDish.is_available === false) {
+                    unavailSet.add(rawId);
+                }
+            }
+            setUnavailableItemIds(unavailSet);
+        } catch (e) {
+            console.error('Stock check error:', e);
+        }
+    };
+
+    useEffect(() => {
+        checkCartStockAvailability();
+
+        let subscription;
+        if (isSupabaseConfigured && supabase) {
+            subscription = supabase
+                .channel('cart_realtime_stock')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, () => {
+                    checkCartStockAvailability();
+                })
+                .subscribe();
+        }
+        return () => {
+            if (subscription) supabase.removeChannel(subscription);
+        };
+    }, [items]);
+
     const paymentModeSetting = settings?.payment_mode || 'BOTH';
 
     useEffect(() => {
@@ -62,6 +103,7 @@ export default function Cart() {
     }, [paymentModeSetting]);
 
     const isSelfService = (settings?.service_mode || session.service_mode) === 'SELF_SERVICE';
+    const hasUnavailableItems = items.some(item => unavailableItemIds.has(item.dish_id || item.id));
 
     const handleClose = () => {
         navigate(-1);
@@ -86,6 +128,34 @@ export default function Cart() {
         if (isEmpty) return;
         setCheckoutError('');
         setIsSubmitting(true);
+
+        // Pre-checkout Live Database Availability Guard
+        try {
+            const freshDishes = await apiService.getDishes();
+            const dishMap = new Map((freshDishes || []).map(d => [d.id, d]));
+            const unavailableNames = [];
+            const unavailSet = new Set();
+
+            for (const item of items) {
+                const rawId = item.dish_id || item.id;
+                const dbDish = dishMap.get(rawId);
+                if (dbDish && dbDish.is_available === false) {
+                    unavailableNames.push(item.name || dbDish.name || 'Dish');
+                    unavailSet.add(rawId);
+                }
+            }
+
+            if (unavailableNames.length > 0) {
+                setUnavailableItemIds(unavailSet);
+                setIsSubmitting(false);
+                const alertMsg = `⚠️ Stock Alert: "${unavailableNames.join(', ')}" is currently out of stock. Please remove unavailable items to checkout.`;
+                setCheckoutError(alertMsg);
+                toast.error(alertMsg, { duration: 4000 });
+                return;
+            }
+        } catch (e) {
+            console.warn('Pre-checkout stock guard check error:', e);
+        }
 
         const checkoutAttemptId = 'chk_' + session.session_id + '_' + Date.now();
 
@@ -263,15 +333,20 @@ export default function Cart() {
                     </div>
                 ) : (
                     <div className="flex flex-col">
-                        {items.map(item => (
-                            <CartItem
-                                key={item.id}
-                                {...item}
-                                onIncrease={() => updateItemQuantity(item.id, item.quantity + 1)}
-                                onDecrease={() => updateItemQuantity(item.id, item.quantity - 1)}
-                                onRemove={() => removeItem(item.id)}
-                            />
-                        ))}
+                        {items.map(item => {
+                            const rawId = item.dish_id || item.id;
+                            const isAvail = !unavailableItemIds.has(rawId);
+                            return (
+                                <CartItem
+                                    key={item.id}
+                                    {...item}
+                                    isAvailable={isAvail}
+                                    onIncrease={() => updateItemQuantity(item.id, item.quantity + 1)}
+                                    onDecrease={() => updateItemQuantity(item.id, item.quantity - 1)}
+                                    onRemove={() => removeItem(item.id)}
+                                />
+                            );
+                        })}
                     </div>
                 )}
 
@@ -402,11 +477,17 @@ export default function Cart() {
                     <div className="flex px-4 py-3 max-w-lg mx-auto w-full">
                         <button
                             onClick={handlePlaceOrder}
-                            disabled={isSubmitting || settings?.is_closed}
-                            className={`flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] transition-transform ${settings?.is_closed ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-[#edc3ba] text-[#171312] active:scale-[0.99] hover:bg-[#e4b5ab]'} disabled:opacity-50`}
+                            disabled={isSubmitting || settings?.is_closed || hasUnavailableItems}
+                            className={`flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] transition-transform ${settings?.is_closed || hasUnavailableItems ? 'bg-slate-300 text-slate-600 cursor-not-allowed' : 'bg-[#edc3ba] text-[#171312] active:scale-[0.99] hover:bg-[#e4b5ab]'} disabled:opacity-50`}
                         >
                             <span className="truncate">
-                                {settings?.is_closed ? 'Shop is Closed' : isSubmitting ? 'Processing...' : 'Checkout'}
+                                {settings?.is_closed
+                                    ? 'Shop is Closed'
+                                    : hasUnavailableItems
+                                        ? 'Remove Out-of-Stock Items to Checkout'
+                                        : isSubmitting
+                                            ? 'Processing...'
+                                            : 'Checkout'}
                             </span>
                         </button>
                     </div>

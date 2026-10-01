@@ -49,6 +49,7 @@ export default function QRHandler() {
             })
             .catch(err => {
                 if (!isMounted) return;
+                console.error('QR code validation error:', err);
                 setStatus('invalid');
                 setErrorMessage('Unable to validate QR code. Please contact staff.');
             });

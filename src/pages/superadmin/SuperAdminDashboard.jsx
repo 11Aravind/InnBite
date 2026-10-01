@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings, THEME_PRESETS } from '../../context/SettingsContext';
-import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { ImageFileInput } from '../../components/ImageUploadCropModal';
 import {
     Sliders,
     CreditCard,
@@ -19,14 +17,11 @@ import {
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
-    const { settings, updateSettings, loading } = useSettings();
-    const { user } = useAuth();
+    const { settings, updateSettings } = useSettings();
 
     const [formState, setFormState] = useState({
         app_name: '',
-        logo_url: '/logo/innbite-logo.png',
         service_mode: 'TABLE_SERVICE',
-        payment_mode: 'BOTH',
         theme_color: 'emerald',
         is_closed: false
     });
@@ -37,9 +32,7 @@ export default function SuperAdminDashboard() {
         if (settings) {
             setFormState({
                 app_name: settings.app_name || settings.restaurant_name || 'InnBite',
-                logo_url: settings.logo_url || '/logo/innbite-logo.png',
                 service_mode: settings.service_mode || 'TABLE_SERVICE',
-                payment_mode: settings.payment_mode || 'BOTH',
                 theme_color: settings.theme_color || 'emerald',
                 is_closed: Boolean(settings.is_closed)
             });
@@ -53,9 +46,8 @@ export default function SuperAdminDashboard() {
             await updateSettings({
                 restaurant_name: formState.app_name,
                 app_name: formState.app_name,
-                logo_url: formState.logo_url,
+                logo_url: '/logo.svg',
                 service_mode: formState.service_mode,
-                payment_mode: formState.payment_mode,
                 theme_color: formState.theme_color,
                 is_closed: formState.is_closed
             });
@@ -77,7 +69,7 @@ export default function SuperAdminDashboard() {
                         <Sliders className="w-6 h-6 text-[#114536]" /> Configuration
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">
-                        Master controls to onboard new clients, customize branding, switch themes, and configure payment modes.
+                        Master controls to onboard new clients, customize branding, and switch themes.
                     </p>
                 </div>
             </div>
@@ -96,131 +88,23 @@ export default function SuperAdminDashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-2">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                                Application Name
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formState.app_name}
-                                onChange={(e) => setFormState({ ...formState, app_name: e.target.value })}
-                                placeholder="e.g. InnBite, Orderly, Cafe Delight"
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#114536] focus:bg-white transition-all"
-                            />
-                            <p className="text-[11px] text-slate-400 mt-1.5">This name updates the browser document title, customer header brand logo, and customer receipts instantly.</p>
-                        </div>
-
-                        <div>
-                            <ImageFileInput
-                                value={formState.logo_url}
-                                onChange={(val) => setFormState({ ...formState, logo_url: val })}
-                                aspect={1}
-                                label="Upload logo file or paste URL (PNG / SVG / JPG)"
-                            />
-                            <p className="text-[11px] text-slate-400 mt-1.5">Upload a square logo or transparent PNG. This logo displays across header bars, navigation sidebars, and receipts.</p>
-                        </div>
+                    <div className="pt-2">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Application Name
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={formState.app_name}
+                            onChange={(e) => setFormState({ ...formState, app_name: e.target.value })}
+                            placeholder="e.g. InnBite, Orderly, Cafe Delight"
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#114536] focus:bg-white transition-all"
+                        />
+                        <p className="text-[11px] text-slate-400 mt-1.5">This name updates the browser document title, customer header brand title, and customer receipts instantly. Application logo defaults to /logo.svg in public folder.</p>
                     </div>
                 </div>
 
-                {/* 2. Payment Options Control (Online Only vs Pay at Shop vs Both) */}
-                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                    <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                        <div className="p-2.5 bg-emerald-50 text-[#114536] rounded-2xl border border-emerald-100">
-                            <CreditCard className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h2 className="text-base font-bold text-slate-900">Payment Mode Configuration</h2>
-                            <p className="text-xs text-slate-500">Choose if this client uses Online payment only, Pay at Counter, or Both.</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                        {/* Option 1: ONLINE ONLY */}
-                        <div
-                            onClick={() => setFormState({ ...formState, payment_mode: 'ONLINE_ONLY' })}
-                            className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${formState.payment_mode === 'ONLINE_ONLY'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                                }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="p-2 rounded-xl bg-emerald-100 text-[#114536]">
-                                    <CreditCard className="w-5 h-5" />
-                                </div>
-                                {formState.payment_mode === 'ONLINE_ONLY' && (
-                                    <CheckCircle2 className="w-5 h-5 text-[#114536]" />
-                                )}
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-extrabold text-slate-900">Online Payment Only</h3>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Customers must complete payment via UPI/Razorpay before order is sent to kitchen.
-                                </p>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 w-fit">
-                                Razorpay Mandatory
-                            </span>
-                        </div>
-
-                        {/* Option 2: PAY AT SHOP / COUNTER */}
-                        <div
-                            onClick={() => setFormState({ ...formState, payment_mode: 'PAY_AT_COUNTER' })}
-                            className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${formState.payment_mode === 'PAY_AT_COUNTER'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                                }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
-                                    <Store className="w-5 h-5" />
-                                </div>
-                                {formState.payment_mode === 'PAY_AT_COUNTER' && (
-                                    <CheckCircle2 className="w-5 h-5 text-[#114536]" />
-                                )}
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-extrabold text-slate-900">Pay at Counter / Shop</h3>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Orders place instantly. Customers pay cash or card directly at the cash register.
-                                </p>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 w-fit">
-                                Cash / Counter Pay
-                            </span>
-                        </div>
-
-                        {/* Option 3: BOTH OPTIONS */}
-                        <div
-                            onClick={() => setFormState({ ...formState, payment_mode: 'BOTH' })}
-                            className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${formState.payment_mode === 'BOTH'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                                }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
-                                    <ShoppingBag className="w-5 h-5" />
-                                </div>
-                                {formState.payment_mode === 'BOTH' && (
-                                    <CheckCircle2 className="w-5 h-5 text-[#114536]" />
-                                )}
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-extrabold text-slate-900">Enable Both Methods</h3>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                    Customer chooses during checkout: Online UPI or Pay at Cash Counter.
-                                </p>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 text-purple-800 w-fit">
-                                Hybrid Checkout
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 3. Service Mode Configuration */}
+                {/* 2. Service Mode Configuration */}
                 <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
                     <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
                         <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100">

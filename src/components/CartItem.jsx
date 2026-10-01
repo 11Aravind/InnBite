@@ -11,6 +11,7 @@ const CartItem = ({
     customizations,
     special_instruction,
     specialInstruction,
+    isAvailable = true,
     onIncrease,
     onDecrease,
     onRemove
@@ -25,15 +26,30 @@ const CartItem = ({
     ].filter(Boolean).join(' • ') || 'Add Notes';
 
     return (
-        <div className="border-b border-[#f4f1f1] last:border-none">
+        <div className={`border-b border-[#f4f1f1] last:border-none ${!isAvailable ? 'bg-rose-50/40' : ''}`}>
+            {!isAvailable && (
+                <div className="bg-rose-100 border-b border-rose-200 px-4 py-1.5 flex items-center justify-between text-rose-800 text-xs font-bold">
+                    <span>⚠️ Item Out of Stock - Please remove to checkout</span>
+                    <button onClick={onRemove} className="text-rose-700 underline font-black hover:text-rose-900">
+                        Remove Item
+                    </button>
+                </div>
+            )}
             <div className="flex gap-4 bg-white px-4 py-3 justify-between flex-wrap sm:flex-nowrap relative group">
                 <div className="flex items-start gap-4">
                     <div
-                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]"
+                        className={`bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px] ${!isAvailable ? 'grayscale-[60%]' : ''}`}
                         style={{ backgroundImage: `url("${image || '/placeholderfood.png'}")` }}
                     />
                     <div className="flex flex-1 flex-col justify-center">
-                        <p className="text-[#171312] text-base font-medium leading-normal">{name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[#171312] text-base font-medium leading-normal">{name}</p>
+                            {!isAvailable && (
+                                <span className="bg-rose-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded">
+                                    Out of Stock
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[#836c67] text-sm font-normal leading-normal">₹{price}</p>
                         <p className="text-[#836c67] text-sm font-normal leading-normal">{portion}</p>
                     </div>
@@ -41,7 +57,7 @@ const CartItem = ({
                 <div className="shrink-0 flex flex-col items-end gap-2">
                     <button 
                         onClick={onRemove}
-                        className="text-[#ef4f3f] text-xs font-medium bg-rose-50 px-2 py-0.5 rounded-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-[#ef4f3f] text-xs font-medium bg-rose-50 px-2 py-0.5 rounded-full mb-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                         Remove
                     </button>

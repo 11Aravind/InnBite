@@ -9,12 +9,14 @@ import {
     Edit2,
     Trash2,
     FolderKanban,
-    X
+    X,
+    RefreshCw
 } from 'lucide-react';
 
 export default function AdminCategories() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
 
@@ -54,6 +56,7 @@ export default function AdminCategories() {
             toast.error('Please upload a category image');
             return;
         }
+        setIsSaving(true);
         try {
             await apiService.saveCategory({
                 id: editingCategory?.id,
@@ -67,6 +70,8 @@ export default function AdminCategories() {
         } catch (err) {
             console.error('Save category error:', err);
             toast.error(err.message || 'Failed to save category into database.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -240,7 +245,20 @@ export default function AdminCategories() {
                             </div>
                             <div className="pt-2 flex gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm">Cancel</button>
-                                <button type="submit" className="w-1/2 h-11 btn-primary text-sm">Save Category</button>
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="w-1/2 h-11 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Saving Category...</span>
+                                        </>
+                                    ) : (
+                                        <span>Save Category</span>
+                                    )}
+                                </button>
                             </div>
                         </form>
                     </div>

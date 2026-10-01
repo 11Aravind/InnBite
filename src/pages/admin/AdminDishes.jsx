@@ -15,13 +15,15 @@ import {
     SlidersHorizontal,
     CheckCircle2,
     XCircle,
-    Check
+    Check,
+    RefreshCw
 } from 'lucide-react';
 
 export default function AdminDishes() {
     const [dishes, setDishes] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDish, setEditingDish] = useState(null);
 
@@ -111,11 +113,12 @@ export default function AdminDishes() {
     }, [dishes, selectedCategory, selectedStatus]);
 
     const handleOpenModal = (dish = null) => {
-        setSelectedPresetPortion('Regular');
         setCustomPortionLabel('');
         setPortionPrice('');
         setNewCustomizationItem('');
         setEditingPortionIdx(null);
+
+        const defaultPresetList = ['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack'];
 
         if (dish) {
             setEditingDish(dish);
@@ -124,6 +127,13 @@ export default function AdminDishes() {
                 : (typeof dish.ingredients === 'string' && dish.ingredients.trim())
                     ? dish.ingredients.split(',').map(s => s.trim()).filter(Boolean)
                     : ['Cheese', 'Onion', 'Garlic', 'Spice'];
+
+            const initialPortions = (dish.portions && dish.portions.length > 0) ? dish.portions : [
+                { value: "regular", label: "Regular", price: Number(dish.basePrice || dish.base_price || 0) }
+            ];
+
+            const availablePreset = defaultPresetList.find(p => !initialPortions.some(existing => existing.label.toLowerCase() === p.toLowerCase())) || 'Other';
+            setSelectedPresetPortion(availablePreset);
 
             setFormData({
                 name: dish.name || '',
@@ -139,12 +149,16 @@ export default function AdminDishes() {
                 isPopular: Boolean(dish.is_popular || dish.isPopular),
                 isSpecial: Boolean(dish.is_special || dish.isSpecial),
                 isAvailable: dish.is_available !== undefined ? dish.is_available : true,
-                portions: (dish.portions && dish.portions.length > 0) ? dish.portions : [
-                    { value: "regular", label: "Regular", price: Number(dish.basePrice || dish.base_price || 0) }
-                ]
+                portions: initialPortions
             });
         } else {
             setEditingDish(null);
+            const initialPortions = [
+                { value: "regular", label: "Regular", price: 0 }
+            ];
+            const availablePreset = defaultPresetList.find(p => !initialPortions.some(existing => existing.label.toLowerCase() === p.toLowerCase())) || 'Other';
+            setSelectedPresetPortion(availablePreset);
+
             setFormData({
                 name: '',
                 description: '',
@@ -158,9 +172,7 @@ export default function AdminDishes() {
                 isPopular: false,
                 isSpecial: false,
                 isAvailable: true,
-                portions: [
-                    { value: "regular", label: "Regular", price: 0 }
-                ],
+                portions: initialPortions,
                 ingredientsList: ''
             });
         }
@@ -185,19 +197,33 @@ export default function AdminDishes() {
             return;
         }
 
+        const basePriceNum = Number(formData.basePrice) || 0;
+
+        const processedPortions = (formData.portions && formData.portions.length > 0)
+            ? formData.portions.map(p => {
+                const pPrice = Number(p.price);
+                const isReg = p.label.toLowerCase() === 'regular' || formData.portions.length === 1;
+                const finalPrice = (isNaN(pPrice) || pPrice === 0) && isReg && basePriceNum > 0
+                    ? basePriceNum
+                    : (isNaN(pPrice) ? 0 : pPrice);
+                return {
+                    ...p,
+                    price: finalPrice
+                };
+            })
+            : [{ value: "regular", label: "Regular", price: basePriceNum }];
+
         const payload = {
             id: editingDish?.id,
             name: formData.name,
             description: formData.description,
             preparation: formData.preparation,
-            basePrice: Number(formData.basePrice),
-            base_price: Number(formData.basePrice),
+            basePrice: basePriceNum,
+            base_price: basePriceNum,
             category: formData.category,
             category_id: formData.category,
             images: formData.images,
-            portions: (formData.portions && formData.portions.length > 0) ? formData.portions : [
-                { value: "regular", label: "Regular", price: Number(formData.basePrice) }
-            ],
+            portions: processedPortions,
             ingredients: Array.isArray(formData.ingredients)
                 ? formData.ingredients
                 : typeof formData.ingredients === 'string'
@@ -217,6 +243,7 @@ export default function AdminDishes() {
             is_available: formData.isAvailable
         };
 
+        setIsSaving(true);
         try {
             await apiService.saveDish(payload);
             toast.success(`Dish "${payload.name}" saved successfully!`);
@@ -225,17 +252,25 @@ export default function AdminDishes() {
         } catch (err) {
             console.error('Save dish error:', err);
             toast.error(err.message || 'Failed to save dish into database.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleToggleAvailability = async (dish) => {
-        const updatedStatus = !(dish.is_available !== false);
-        const payload = {
-            ...dish,
-            is_available: updatedStatus
-        };
-        await apiService.saveDish(payload);
-        loadData();
+        const newStatus = !(dish.is_available !== false);
+
+        // Optimistically update UI
+        setDishes(prev => prev.map(d => d.id === dish.id ? { ...d, is_available: newStatus } : d));
+
+        try {
+            await apiService.toggleDishAvailability(dish.id, newStatus);
+            toast.success(`"${dish.name}" is now ${newStatus ? 'Available' : 'Out of Stock'}`);
+        } catch (err) {
+            console.error('Error toggling dish availability:', err);
+            toast.error('Failed to update stock status in Supabase');
+            loadData();
+        }
     };
 
     // Delete Confirmation Modal State
@@ -307,7 +342,7 @@ export default function AdminDishes() {
         },
         {
             accessorKey: 'basePrice',
-            header: 'Base Price',
+            header: 'Regular Price',
             cell: ({ row }) => {
                 const dish = row.original;
                 const price = Number(dish.basePrice || dish.base_price || 0).toFixed(2);
@@ -510,7 +545,7 @@ export default function AdminDishes() {
                                         </div>
                                         <div>
                                             <label className="text-xs font-bold text-slate-700 block mb-1">
-                                                Base Price (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
+                                                Regular Price (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
                                             </label>
                                             <input
                                                 type="number"
@@ -518,7 +553,29 @@ export default function AdminDishes() {
                                                 required
                                                 placeholder="250.00"
                                                 value={formData.basePrice}
-                                                onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const newPriceNum = val !== '' ? Number(val) : 0;
+                                                    
+                                                    let hasRegular = false;
+                                                    let updatedPortions = (formData.portions || []).map(p => {
+                                                        if ((p.label || p.value || '').toLowerCase() === 'regular') {
+                                                            hasRegular = true;
+                                                            return { ...p, price: newPriceNum };
+                                                        }
+                                                        return p;
+                                                    });
+
+                                                    if (!hasRegular && updatedPortions.length === 0) {
+                                                        updatedPortions = [{ value: 'regular', label: 'Regular', price: newPriceNum }];
+                                                    }
+
+                                                    setFormData({
+                                                        ...formData,
+                                                        basePrice: val,
+                                                        portions: updatedPortions
+                                                    });
+                                                }}
                                                 className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none focus:border-[#114536] text-slate-900 font-bold"
                                             />
                                         </div>
@@ -547,7 +604,7 @@ export default function AdminDishes() {
                                                 Portion Sizes & Pricing Chips
                                             </label>
                                             <span className="text-[10px] text-slate-500 font-semibold">
-                                                Base: ₹{Number(formData.basePrice || 0).toFixed(2)}
+                                                Regular: ₹{Number(formData.basePrice || 0).toFixed(2)}
                                             </span>
                                         </div>
 
@@ -598,7 +655,7 @@ export default function AdminDishes() {
                                                         key={idx}
                                                         className="bg-white border border-slate-200 shadow-2xs rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-bold text-slate-800 hover:border-slate-300 transition-all"
                                                     >
-                                                        <span className="text-[#114536] font-extrabold">{p.label}</span>
+                                                        <span className="text-[#114536] font-extrabold">{p.label || p.value}</span>
                                                         <span className="text-slate-500 text-[11px] font-semibold bg-slate-100 px-1.5 py-0.5 rounded-md">
                                                             ₹{calculatedPrice}
                                                         </span>
@@ -615,6 +672,9 @@ export default function AdminDishes() {
                                                                 onClick={() => {
                                                                     const updated = formData.portions.filter((_, i) => i !== idx);
                                                                     setFormData({ ...formData, portions: updated });
+                                                                    const presetList = ['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack'];
+                                                                    const nextAvail = presetList.find(preset => !updated.some(existing => (existing.label || existing.value || '').toLowerCase() === preset.toLowerCase())) || 'Other';
+                                                                    setSelectedPresetPortion(nextAvail);
                                                                 }}
                                                                 className="text-slate-400 hover:text-rose-600 transition-colors"
                                                             >
@@ -634,7 +694,7 @@ export default function AdminDishes() {
                                                     className={`${selectedPresetPortion === 'Other' ? 'w-[100px]' : 'flex-1'} shrink-0 h-9 bg-white border border-slate-200 px-2 rounded-lg text-xs font-bold outline-none focus:border-[#114536] truncate`}
                                                 >
                                                     {['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack']
-                                                        .filter(label => !formData.portions?.some(p => p.label.toLowerCase() === label.toLowerCase()))
+                                                        .filter(label => !formData.portions?.some(p => (p.label || p.value || '').toLowerCase() === label.toLowerCase()))
                                                         .map(label => (
                                                             <option key={label} value={label}>{label}</option>
                                                         ))
@@ -665,14 +725,17 @@ export default function AdminDishes() {
                                                     type="button"
                                                     onClick={() => {
                                                         const finalLabel = selectedPresetPortion === 'Other' ? customPortionLabel.trim() : selectedPresetPortion;
-                                                        if (!finalLabel) return;
+                                                        if (!finalLabel) {
+                                                            toast.error('Please specify a portion size label');
+                                                            return;
+                                                        }
                                                         
-                                                        if (formData.portions?.some(p => p.label.toLowerCase() === finalLabel.toLowerCase())) {
+                                                        if (formData.portions?.some(p => (p.label || p.value || '').toLowerCase() === finalLabel.toLowerCase())) {
                                                             toast.error(`"${finalLabel}" size already exists!`);
                                                             return;
                                                         }
 
-                                                        let defaultPrice = Number(portionPrice) || Number(formData.basePrice) || 0;
+                                                        let defaultPrice = portionPrice !== '' ? Number(portionPrice) : (Number(formData.basePrice) || 0);
 
                                                         const newChip = {
                                                             value: finalLabel.toLowerCase().replace(/[^a-z0-9]/g, '-'),
@@ -680,12 +743,17 @@ export default function AdminDishes() {
                                                             price: defaultPrice
                                                         };
 
+                                                        const updatedPortions = [...(formData.portions || []), newChip];
                                                         setFormData({
                                                             ...formData,
-                                                            portions: [...(formData.portions || []), newChip]
+                                                            portions: updatedPortions
                                                         });
                                                         setCustomPortionLabel('');
                                                         setPortionPrice('');
+
+                                                        const presetList = ['Regular', 'Large', 'Small', 'Half', 'Full', 'Medium', 'Family Pack'];
+                                                        const nextAvailable = presetList.find(p => !updatedPortions.some(existing => (existing.label || existing.value || '').toLowerCase() === p.toLowerCase())) || 'Other';
+                                                        setSelectedPresetPortion(nextAvailable);
                                                     }}
                                                     className="h-9 px-4 bg-[#114536] hover:bg-[#0d372b] text-white rounded-lg text-xs font-bold transition-colors shrink-0 flex items-center gap-1"
                                                 >
@@ -703,37 +771,28 @@ export default function AdminDishes() {
                                             <label className="text-xs font-bold text-slate-800">Dish Images (Max 3)</label>
                                             <span className="text-[10px] font-semibold text-slate-500">{formData.images?.length || 0}/3 uploaded</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 gap-3">
                                             {[0, 1, 2].map((idx) => {
-                                                // Only show the next input if previous is filled
+                                                // Only show slot if it has an image or is next in line to upload
                                                 if (idx > 0 && (!formData.images || idx > formData.images.length)) return null;
-                                                
+
                                                 return (
-                                                    <div key={idx} className={`relative ${idx === 0 ? 'col-span-2' : 'col-span-1'}`}>
+                                                    <div key={idx} className="relative">
                                                         <ImageFileInput
                                                             value={formData.images?.[idx] || ''}
                                                             onChange={(croppedImg) => {
-                                                                const newImages = [...(formData.images || [])];
-                                                                newImages[idx] = croppedImg;
+                                                                let newImages = [...(formData.images || [])];
+                                                                if (croppedImg) {
+                                                                    newImages[idx] = croppedImg;
+                                                                } else {
+                                                                    newImages = newImages.filter((_, i) => i !== idx);
+                                                                }
                                                                 setFormData({ ...formData, images: newImages });
                                                             }}
-                                                            label={idx === 0 ? "Primary Image (Required)" : `Additional Image ${idx + 1}`}
+                                                            label={idx === 0 ? "Primary Image (Required) *" : `Additional Image ${idx + 1}`}
                                                             aspect={4 / 3}
                                                             required={idx === 0}
                                                         />
-                                                        {idx > 0 && formData.images?.[idx] && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newImages = formData.images.filter((_, i) => i !== idx);
-                                                                    setFormData({ ...formData, images: newImages });
-                                                                }}
-                                                                className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1.5 shadow-md hover:bg-rose-600 transition-colors z-10"
-                                                                title="Remove Image"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -895,9 +954,17 @@ export default function AdminDishes() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="w-1/2 h-11 btn-primary text-sm"
+                                    disabled={isSaving}
+                                    className="w-1/2 h-11 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                                 >
-                                    Save Dish
+                                    {isSaving ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Saving Dish...</span>
+                                        </>
+                                    ) : (
+                                        <span>Save Dish</span>
+                                    )}
                                 </button>
                             </div>
                         </form>

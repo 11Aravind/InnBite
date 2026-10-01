@@ -1,6 +1,6 @@
 import { apiService } from './apiService';
 import { secureStorage } from './secureStorage';
-import { playNotificationSound } from './audio';
+import { playNotificationSound } from './sound';
 import { toast } from 'react-hot-toast';
 
 export const handleOrderRealtimeUpdate = (oldOrder, newPayload) => {
