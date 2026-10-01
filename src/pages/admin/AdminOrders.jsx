@@ -5,6 +5,17 @@ import { playOrderChimeSound } from '../../utils/sound';
 import AdminSkeletonTable from '../../components/AdminSkeletonTable';
 import { Receipt, RefreshCw, DollarSign, CreditCard, Bell, Volume2, VolumeX, MessageSquare } from 'lucide-react';
 
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    return `${day}/${month}/${year}, ${timeStr}`;
+};
+
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -132,7 +143,7 @@ export default function AdminOrders() {
                                         )}
                                         <div>
                                             <span className="font-bold text-slate-900 block text-sm">{order.customer_name || 'Guest'}</span>
-                                            <span className="text-[11px] text-slate-400 font-mono">{new Date(order.created_at).toLocaleString()}</span>
+                                            <span className="text-[11px] text-slate-400 font-mono">{formatDateTime(order.created_at)}</span>
                                         </div>
                                     </div>
 
@@ -201,16 +212,20 @@ export default function AdminOrders() {
                                     })}
                                 </div>
 
-                                {/* Payment Footer */}
                                 <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-slate-500 font-semibold">Payment Method:</span>
                                         <span className="font-bold text-slate-900 capitalize flex items-center gap-1">
-                                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Online Razorpay
+                                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                                            {order.payment_method === 'cash_at_counter' ? 'Pay at Counter / Cash' : 'Online Razorpay'}
                                         </span>
-                                        {order.razorpay_payment_id && (
-                                            <span className="text-[10px] font-mono bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                                                ID: {order.razorpay_payment_id}
+                                        {order.razorpay_payment_id ? (
+                                            <span className="text-[10px] font-mono bg-emerald-50 text-emerald-900 px-2 py-0.5 rounded-md border border-emerald-200 font-bold" title="Razorpay Payment Transaction ID">
+                                                Txn ID: {order.razorpay_payment_id}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200" title="Checkout Reference ID">
+                                                Ref: {order.idempotency_key || `ORD-${order.id}`} (No Payment Completed)
                                             </span>
                                         )}
                                     </div>
