@@ -33,12 +33,6 @@ export default function ConfirmDeleteModal({
                     <p className="text-xs text-slate-500 mt-1.5 max-w-xs leading-relaxed">
                         {message}
                     </p>
-
-                    {itemTitle && (
-                        <div className="mt-3 px-3 py-1.5 bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 line-clamp-1 max-w-xs">
-                            "{itemTitle}"
-                        </div>
-                    )}
                 </div>
 
                 <div className="flex gap-3 pt-6 mt-6 border-t border-slate-100">

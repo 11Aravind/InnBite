@@ -7,7 +7,7 @@ export const createImage = (url) =>
         image.src = url;
     });
 
-export async function getCroppedImg(imageSrc, pixelCrop) {
+export async function getCroppedImg(imageSrc, pixelCrop, quality = 0.85) {
     const image = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -31,5 +31,25 @@ export async function getCroppedImg(imageSrc, pixelCrop) {
         pixelCrop.height
     );
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    // Convert cropped canvas image to WebP format
+    return canvas.toDataURL('image/webp', quality);
+}
+
+export async function convertToWebP(imageSrc, quality = 0.85) {
+    if (!imageSrc) return '';
+    if (typeof imageSrc === 'string' && imageSrc.startsWith('data:image/webp')) {
+        return imageSrc;
+    }
+    try {
+        const image = await createImage(imageSrc);
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth || image.width || 800;
+        canvas.height = image.naturalHeight || image.height || 800;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return imageSrc;
+        ctx.drawImage(image, 0, 0);
+        return canvas.toDataURL('image/webp', quality);
+    } catch {
+        return imageSrc;
+    }
 }

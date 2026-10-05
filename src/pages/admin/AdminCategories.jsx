@@ -232,6 +232,7 @@ export default function AdminCategories() {
                                 onChange={(croppedImg) => setImageUrl(croppedImg)}
                                 label="Upload Category Image (File Upload & Crop)"
                                 aspect={1 / 1}
+                                dimensions="400 x 400 px (1:1 Square)"
                                 required={true}
                             />
                             <div>

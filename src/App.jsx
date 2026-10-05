@@ -27,9 +27,9 @@ const AdminBanners = lazy(() => import('./pages/admin/AdminBanners'));
 const AdminTables = lazy(() => import('./pages/admin/AdminTables'));
 const AdminWaiters = lazy(() => import('./pages/admin/AdminWaiters'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
+const AdminPOS = lazy(() => import('./pages/admin/AdminPOS'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
-
-const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
 
 import { APP_CONFIG } from './config';
 
@@ -43,12 +43,29 @@ const PageLoadingFallback = () => (
 );
 
 function App() {
+  React.useEffect(() => {
+    // Prefetch secondary lazy routes in background for instant page transitions
+    const timer = setTimeout(() => {
+      import('./pages/FoodDetails');
+      import('./pages/CategoryDetails');
+      import('./pages/Cart');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <SettingsProvider>
           <CartProvider>
-            <Toaster position="top-center" reverseOrder={false} toastOptions={{ duration: 3000 }} />
+            <Toaster
+              position="bottom-center"
+              reverseOrder={false}
+              containerStyle={{
+                bottom: 75,
+              }}
+              toastOptions={{ duration: 3000 }}
+            />
             <NetworkStatusBanner />
             <Suspense fallback={<PageLoadingFallback />}>
               <Routes>
@@ -93,26 +110,14 @@ function App() {
                   }
                 >
                   <Route index element={<AdminDashboard />} />
+                  <Route path="pos" element={<AdminPOS />} />
                   <Route path="dishes" element={<AdminDishes />} />
                   <Route path="categories" element={<AdminCategories />} />
                   <Route path="banners" element={<AdminBanners />} />
                   <Route path="tables" element={<AdminTables />} />
                   <Route path="waiters" element={<AdminWaiters />} />
                   <Route path="orders" element={<AdminOrders />} />
-                </Route>
-
-                {/* Super Admin Platform Owner Portal (Protected strictly for Platform Developer/SaaS Owner) */}
-                <Route path="/superadmin/login" element={<AdminLogin />} />
-                <Route
-                  path="/superadmin"
-                  element={
-                    <ProtectedRoute requiredRole="SUPER_ADMIN">
-                      <AdminLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<SuperAdminDashboard />} />
-                  <Route path="admins" element={<AdminWaiters />} />
+                  <Route path="settings" element={<AdminSettings />} />
                 </Route>
               </Routes>
             </Suspense>

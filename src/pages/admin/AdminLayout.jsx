@@ -12,7 +12,9 @@ import {
     Users,
     Sliders,
     LogOut,
-    ExternalLink
+    ExternalLink,
+    Printer,
+    Settings
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -21,26 +23,17 @@ export default function AdminLayout() {
     const { logout, user } = useAuth();
     const { appName, logoUrl } = useSettings();
 
-    const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
-
-    const superAdminNavItems = [
-        { path: '/superadmin', label: 'Client Configuration', icon: Sliders, exact: true },
-        { path: '/superadmin/admins', label: 'Admin Accounts', icon: Users },
-    ];
-
-    const adminNavItems = [
+    const navItems = [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+        { path: '/admin/pos', label: 'POS Billing', icon: Printer },
         { path: '/admin/orders', label: 'Orders', icon: Receipt },
         { path: '/admin/dishes', label: 'Menu', icon: Utensils },
         { path: '/admin/categories', label: 'Categories', icon: FolderKanban },
         { path: '/admin/waiters', label: 'Waiters', icon: Users },
         { path: '/admin/banners', label: 'Banners', icon: ImageIcon },
         { path: '/admin/tables', label: 'Tables', icon: QrCode },
+        { path: '/admin/settings', label: 'App Settings', icon: Settings },
     ];
-
-    const navItems = isSuperAdminRoute ? superAdminNavItems : adminNavItems;
-    const portalTitle = isSuperAdminRoute ? 'Super Admin' : 'Admin';
-    const portalSub = isSuperAdminRoute ? 'SaaS Console' : 'Management Portal';
 
     const isActive = (item) => {
         if (item.exact) return location.pathname === item.path;
@@ -49,8 +42,7 @@ export default function AdminLayout() {
 
     const handleLogout = () => {
         logout();
-        const loginPath = isSuperAdminRoute ? '/superadmin/login' : '/admin/login';
-        navigate(loginPath, { replace: true });
+        navigate('/admin/login', { replace: true });
     };
 
     return (
@@ -64,9 +56,9 @@ export default function AdminLayout() {
                             <img src={logoUrl || '/logo.svg'} alt={appName} className="w-9 h-9 object-contain shrink-0 rounded-lg bg-white/10 p-1" />
                             <div>
                                 <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                                    {appName} <span className="text-[10px] uppercase font-bold bg-sidebar-active text-white px-1.5 py-0.5 rounded-md border border-sidebar-active">{portalTitle}</span>
+                                    {appName} <span className="text-[10px] uppercase font-bold bg-sidebar-active text-white px-1.5 py-0.5 rounded-md border border-sidebar-active">Admin</span>
                                 </h1>
-                                <span className="text-[11px] text-white/80 font-medium">{portalSub}</span>
+                                <span className="text-[11px] text-white/80 font-medium">Management Portal</span>
                             </div>
                         </div>
                     </div>
@@ -105,15 +97,15 @@ export default function AdminLayout() {
                             {user?.name || 'Administrator'}
                         </span>
                         <span className="text-[10px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded border border-white/30">
-                            {portalTitle}
+                            Admin
                         </span>
                     </div>
 
                     <button
-                        onClick={() => navigate(isSuperAdminRoute ? '/admin' : '/')}
+                        onClick={() => navigate('/')}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sidebar-active hover:bg-white/10 text-white text-xs font-bold rounded-xl transition-all border border-sidebar-active group shadow-sm cursor-pointer"
                     >
-                        <span>{isSuperAdminRoute ? 'Restaurant Admin View' : 'Customer Menu'}</span>
+                        <span>Customer Menu</span>
                         <ExternalLink className="w-3.5 h-3.5 text-white/80 group-hover:text-white" />
                     </button>
 

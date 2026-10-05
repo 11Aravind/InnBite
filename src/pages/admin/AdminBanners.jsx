@@ -247,6 +247,7 @@ export default function AdminBanners() {
                                 onChange={(croppedImg) => setImageUrl(croppedImg)}
                                 label="Upload Banner Image (File Upload & Crop)"
                                 aspect={16 / 9}
+                                dimensions="1200 x 675 px (16:9 Widescreen)"
                                 required={true}
                             />
                             <div>

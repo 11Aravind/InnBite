@@ -7,6 +7,7 @@ import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Sparkles, MessageSquare, Plus, Check, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { showAddToCartToast } from '../utils/toastUtils';
 import { APP_CONFIG } from '../config';
 import { useSettings } from '../context/SettingsContext';
 
@@ -16,29 +17,47 @@ const FoodDetails = () => {
     const { foodId } = useParams();
     const { addItem, totalUniqueItems } = useCart();
 
-    const [foodData, setFoodData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const initialData = apiService.getDishByIdSync(foodId);
+    const [foodData, setFoodData] = useState(initialData);
+    const [loading, setLoading] = useState(!initialData);
     const [quantity, setQuantity] = useState(1);
-    const [selectedPortion, setSelectedPortion] = useState(null);
+    const [selectedPortion, setSelectedPortion] = useState(() => {
+        if (initialData?.portions && initialData.portions.length > 0) {
+            return initialData.portions[0].value;
+        }
+        return "regular";
+    });
 
     // Customization State
     const [specialInstruction, setSpecialInstruction] = useState('');
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        setLoading(true);
-        apiService.getDishById(foodId)
-            .then((data) => {
-                if (data) {
-                    setFoodData(data);
-                    const defaultPortion = (data.portions && data.portions.length > 0)
-                        ? data.portions[0].value
-                        : "regular";
-                    setSelectedPortion(defaultPortion);
-                }
-            })
-            .catch(err => console.error('Error fetching dish details:', err))
-            .finally(() => setLoading(false));
+        const cached = apiService.getDishByIdSync(foodId);
+        if (cached) {
+            setFoodData(cached);
+            if (!selectedPortion) {
+                const defaultPortion = (cached.portions && cached.portions.length > 0)
+                    ? cached.portions[0].value
+                    : "regular";
+                setSelectedPortion(defaultPortion);
+            }
+            setLoading(false);
+        } else {
+            setLoading(true);
+            apiService.getDishById(foodId)
+                .then((data) => {
+                    if (data) {
+                        setFoodData(data);
+                        const defaultPortion = (data.portions && data.portions.length > 0)
+                            ? data.portions[0].value
+                            : "regular";
+                        setSelectedPortion(defaultPortion);
+                    }
+                })
+                .catch(err => console.error('Error fetching dish details:', err))
+                .finally(() => setLoading(false));
+        }
     }, [foodId]);
 
     if (loading) {
@@ -112,18 +131,7 @@ const FoodDetails = () => {
             quantity
         );
 
-        toast.success(`${quantity}x ${foodData.name} added to order!`, {
-            icon: '🛒',
-            style: {
-                borderRadius: '16px',
-                background: '#114536',
-                color: '#ffffff',
-                fontWeight: '700',
-                fontSize: '14px',
-                padding: '12px 18px',
-            },
-            duration: 2500,
-        });
+        showAddToCartToast(foodData.name, navigate);
     };
 
     return (

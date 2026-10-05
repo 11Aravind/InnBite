@@ -1,6 +1,7 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { APP_CONFIG } from '../config';
 import { secureStorage } from './secureStorage';
+import { convertToWebP } from './cropImage';
 
 const envServiceMode = import.meta.env.VITE_SERVICE_MODE || 'TABLE_SERVICE';
 
@@ -244,6 +245,46 @@ export const apiService = {
         return result;
     },
 
+    getCategoriesSync() {
+        if (menuCache.categories) {
+            return menuCache.categories;
+        }
+        return null;
+    },
+
+    getDishesSync(categoryId = null) {
+        if (menuCache.dishes) {
+            if (categoryId) {
+                return menuCache.dishes.filter(d => String(d.category_id || d.categoryId) === String(categoryId));
+            }
+            return menuCache.dishes;
+        }
+        return null;
+    },
+
+    getDishByIdSync(id) {
+        if (!id) return null;
+        const cached = menuCache.dishMap.get(id);
+        if (cached) {
+            return cached.data;
+        }
+        if (menuCache.dishes) {
+            const found = menuCache.dishes.find(d => String(d.id) === String(id));
+            if (found) {
+                menuCache.dishMap.set(id, { data: found, timestamp: Date.now() });
+                return found;
+            }
+        }
+        if (menuCache.homeData?.all_dishes) {
+            const found = menuCache.homeData.all_dishes.find(d => String(d.id) === String(id));
+            if (found) {
+                menuCache.dishMap.set(id, { data: found, timestamp: Date.now() });
+                return found;
+            }
+        }
+        return null;
+    },
+
     async getCategories() {
         const now = Date.now();
         if (menuCache.categories && (now - menuCache.categoriesTime < CACHE_TTL_MS)) {
@@ -277,16 +318,16 @@ export const apiService = {
 
     async getDishById(id) {
         if (!id) return null;
-        const cached = menuCache.dishMap.get(id);
-        if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
-            return cached.data;
+        const cached = this.getDishByIdSync(id);
+        if (cached && menuCache.dishMap.get(id)?.timestamp && (Date.now() - menuCache.dishMap.get(id).timestamp < CACHE_TTL_MS)) {
+            return cached;
         }
         const { data, error } = await supabase.from('dishes').select('*').eq('id', id).maybeSingle();
         if (error) throw error;
         if (data) {
             menuCache.dishMap.set(id, { data, timestamp: Date.now() });
         }
-        return data;
+        return data || cached;
     },
 
     // ----------------------------------------------------
@@ -425,6 +466,22 @@ export const apiService = {
     // ----------------------------------------------------
     async saveDish(dishPayload) {
         invalidateMenuCache();
+
+        let oldImages = [];
+        if (dishPayload.id) {
+            try {
+                const { data: oldDish } = await supabase.from('dishes').select('images').eq('id', dishPayload.id).maybeSingle();
+                if (oldDish && Array.isArray(oldDish.images)) {
+                    oldImages = oldDish.images;
+                }
+            } catch (e) {
+                console.warn('Could not fetch existing dish for image comparison:', e);
+            }
+        }
+
+        const rawImages = Array.isArray(dishPayload.images) ? dishPayload.images : [dishPayload.imageUrl].filter(Boolean);
+        const processedImages = await Promise.all(rawImages.map(img => processAndUploadImage(img, 'dishes')));
+
         const base_price = Number(dishPayload.basePrice || dishPayload.base_price || 0);
         const supabasePayload = {
             id: dishPayload.id || dishPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4),
@@ -433,7 +490,7 @@ export const apiService = {
             preparation: dishPayload.preparation || dishPayload.preparation_details || '',
             base_price: base_price,
             category_id: dishPayload.category_id || dishPayload.category || null,
-            images: Array.isArray(dishPayload.images) ? dishPayload.images : [dishPayload.imageUrl].filter(Boolean),
+            images: processedImages,
             portions: dishPayload.portions || [],
             ingredients: dishPayload.ingredients || [],
             ingredients_list: dishPayload.ingredients_list || [],
@@ -445,13 +502,37 @@ export const apiService = {
         };
         const { data, error } = await supabase.from('dishes').upsert([supabasePayload]).select().single();
         if (error) throw error;
+
+        // ONLY AFTER successful DB save, delete replaced images from storage
+        const removedImages = oldImages.filter(oldUrl => oldUrl && !processedImages.includes(oldUrl));
+        if (removedImages.length > 0) {
+            await deleteStorageImages(removedImages);
+        }
+
         return data;
     },
 
     async deleteDish(dishId) {
         invalidateMenuCache();
+
+        let oldImages = [];
+        try {
+            const { data: existingDish } = await supabase.from('dishes').select('images').eq('id', dishId).maybeSingle();
+            if (existingDish && Array.isArray(existingDish.images)) {
+                oldImages = existingDish.images;
+            }
+        } catch (e) {
+            console.warn('Could not fetch dish images prior to delete:', e);
+        }
+
         const { error } = await supabase.from('dishes').delete().eq('id', dishId);
         if (error) throw error;
+
+        // ONLY AFTER successful DB deletion, delete related storage images
+        if (oldImages.length > 0) {
+            await deleteStorageImages(oldImages);
+        }
+
         return true;
     },
 
@@ -472,41 +553,195 @@ export const apiService = {
 
     async saveCategory(categoryPayload) {
         invalidateMenuCache();
+
+        let oldImage = null;
+        if (categoryPayload.id) {
+            try {
+                const { data: oldCat } = await supabase.from('categories').select('image_url').eq('id', categoryPayload.id).maybeSingle();
+                oldImage = oldCat?.image_url || null;
+            } catch (e) {
+                console.warn('Could not fetch existing category for image comparison:', e);
+            }
+        }
+
+        const rawImg = categoryPayload.image_url || categoryPayload.image || '';
+        const processedImage = await processAndUploadImage(rawImg, 'categories');
+
         const supabasePayload = {
             id: categoryPayload.id || categoryPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4),
             name: categoryPayload.name,
             description: categoryPayload.description || '',
-            image_url: categoryPayload.image_url || categoryPayload.image || ''
+            image_url: processedImage
         };
         const { data, error } = await supabase.from('categories').upsert([supabasePayload]).select().single();
         if (error) throw error;
+
+        // ONLY AFTER successful DB save, delete replaced image from storage
+        if (oldImage && oldImage !== processedImage) {
+            await deleteStorageImages([oldImage]);
+        }
+
         return data;
     },
 
     async deleteCategory(categoryId) {
         invalidateMenuCache();
+
+        let oldImage = null;
+        try {
+            const { data: oldCat } = await supabase.from('categories').select('image_url').eq('id', categoryId).maybeSingle();
+            oldImage = oldCat?.image_url || null;
+        } catch (e) {
+            console.warn('Could not fetch category image prior to delete:', e);
+        }
+
         const { error } = await supabase.from('categories').delete().eq('id', categoryId);
         if (error) throw error;
+
+        // ONLY AFTER successful DB deletion, delete related storage image
+        if (oldImage) {
+            await deleteStorageImages([oldImage]);
+        }
+
         return true;
     },
 
     async saveBanner(bannerPayload) {
         invalidateMenuCache();
+
+        let oldImage = null;
+        if (bannerPayload.id) {
+            try {
+                const { data: oldBanner } = await supabase.from('banners').select('image_url').eq('id', bannerPayload.id).maybeSingle();
+                oldImage = oldBanner?.image_url || null;
+            } catch (e) {
+                console.warn('Could not fetch existing banner for image comparison:', e);
+            }
+        }
+
+        const rawImg = bannerPayload.image_url || bannerPayload.image || '';
+        const processedImage = await processAndUploadImage(rawImg, 'banners');
+
         const supabasePayload = {
             id: bannerPayload.id || 'banner-' + Date.now(),
             title: bannerPayload.title,
-            image_url: bannerPayload.image_url || bannerPayload.image || '',
+            image_url: processedImage,
             dish_id: bannerPayload.dish_id || null
         };
         const { data, error } = await supabase.from('banners').upsert([supabasePayload]).select().single();
         if (error) throw error;
+
+        // ONLY AFTER successful DB save, delete replaced image from storage
+        if (oldImage && oldImage !== processedImage) {
+            await deleteStorageImages([oldImage]);
+        }
+
         return data;
     },
 
     async deleteBanner(bannerId) {
         invalidateMenuCache();
+
+        let oldImage = null;
+        try {
+            const { data: oldBanner } = await supabase.from('banners').select('image_url').eq('id', bannerId).maybeSingle();
+            oldImage = oldBanner?.image_url || null;
+        } catch (e) {
+            console.warn('Could not fetch banner image prior to delete:', e);
+        }
+
         const { error } = await supabase.from('banners').delete().eq('id', bannerId);
         if (error) throw error;
+
+        // ONLY AFTER successful DB deletion, delete related storage image
+        if (oldImage) {
+            await deleteStorageImages([oldImage]);
+        }
+
         return true;
     }
 };
+
+// Helper to convert dataURL to Blob
+const dataURLtoBlob = (dataurl) => {
+    if (!dataurl || typeof dataurl !== 'string' || !dataurl.startsWith('data:')) return null;
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/webp';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+};
+
+// Helper to convert & upload an image to WebP format in Supabase Storage
+export async function processAndUploadImage(imageInput, folder = 'dishes') {
+    if (!imageInput) return '';
+
+    // If it's a data URL or blob URL, convert to WebP
+    let webpDataUrl = imageInput;
+    if (typeof imageInput === 'string' && (imageInput.startsWith('data:image') || imageInput.startsWith('blob:'))) {
+        webpDataUrl = await convertToWebP(imageInput, 0.85);
+    }
+
+    if (isSupabaseConfigured && typeof webpDataUrl === 'string' && webpDataUrl.startsWith('data:image')) {
+        try {
+            const blob = dataURLtoBlob(webpDataUrl);
+            if (blob) {
+                const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.webp`;
+                const { data, error } = await supabase.storage
+                    .from('menu-images')
+                    .upload(fileName, blob, { contentType: 'image/webp', upsert: true });
+
+                if (error) {
+                    if (error.statusCode === '404' || error.error === 'Bucket not found' || error.code === 'NoSuchBucket') {
+                        console.warn('[Supabase Storage] Bucket "menu-images" not found. Using inline WebP image fallback. To use cloud image URLs, create a public bucket named "menu-images" in your Supabase Dashboard.');
+                    } else {
+                        console.warn('Supabase storage upload error:', error.message || error);
+                    }
+                    return webpDataUrl;
+                }
+
+                if (data) {
+                    const { data: publicUrlData } = supabase.storage
+                        .from('menu-images')
+                        .getPublicUrl(fileName);
+                    return publicUrlData.publicUrl;
+                }
+            }
+        } catch (err) {
+            console.warn('Supabase storage upload exception, falling back to data URL:', err);
+        }
+    }
+
+    return webpDataUrl;
+}
+
+// Helper to delete images from Supabase storage AFTER DB operations succeed
+export async function deleteStorageImages(imageUrls) {
+    if (!isSupabaseConfigured) return;
+    const urls = (Array.isArray(imageUrls) ? imageUrls : [imageUrls]).filter(Boolean);
+    const pathsToDelete = [];
+
+    for (const url of urls) {
+        if (typeof url === 'string' && url.includes('/storage/v1/object/public/menu-images/')) {
+            const path = url.split('/storage/v1/object/public/menu-images/')[1];
+            if (path) pathsToDelete.push(decodeURIComponent(path));
+        }
+    }
+
+    if (pathsToDelete.length > 0) {
+        try {
+            const { error } = await supabase.storage.from('menu-images').remove(pathsToDelete);
+            if (error) {
+                console.warn('Failed to delete storage images:', error);
+            }
+        } catch (err) {
+            console.warn('Storage delete exception:', err);
+        }
+    }
+}
+

@@ -789,8 +789,9 @@ export default function AdminDishes() {
                                                                 }
                                                                 setFormData({ ...formData, images: newImages });
                                                             }}
-                                                            label={idx === 0 ? "Primary Image (Required) *" : `Additional Image ${idx + 1}`}
-                                                            aspect={4 / 3}
+                                                            label={idx === 0 ? "Primary Dish Image" : `Additional Image #${idx + 1}`}
+                                                            aspect={1 / 1}
+                                                            dimensions="800 x 800 px (1:1 Square)"
                                                             required={idx === 0}
                                                         />
                                                     </div>

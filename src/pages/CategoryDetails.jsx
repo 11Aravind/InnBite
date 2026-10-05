@@ -10,21 +10,38 @@ export default function CategoryDetails() {
     const { categoryId } = useParams();
     const navigate = useNavigate();
 
-    const [category, setCategory] = useState(null);
-    const [categoryFoods, setCategoryFoods] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const cachedCats = apiService.getCategoriesSync();
+    const cachedFoods = apiService.getDishesSync(categoryId);
+
+    const [category, setCategory] = useState(() => {
+        if (cachedCats) {
+            return cachedCats.find(c => String(c.id) === String(categoryId)) || { id: categoryId, name: categoryId };
+        }
+        return null;
+    });
+    const [categoryFoods, setCategoryFoods] = useState(cachedFoods || []);
+    const [loading, setLoading] = useState(!cachedFoods);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        setLoading(true);
-        Promise.all([
-            apiService.getCategories(),
-            apiService.getDishes(categoryId)
-        ]).then(([categories, foods]) => {
-            const cat = categories.find(c => c.id === categoryId);
+        const syncCats = apiService.getCategoriesSync();
+        const syncFoods = apiService.getDishesSync(categoryId);
+        if (syncCats && syncFoods) {
+            const cat = syncCats.find(c => String(c.id) === String(categoryId));
             setCategory(cat || { id: categoryId, name: categoryId });
-            setCategoryFoods(foods || []);
-        }).finally(() => setLoading(false));
+            setCategoryFoods(syncFoods);
+            setLoading(false);
+        } else {
+            setLoading(true);
+            Promise.all([
+                apiService.getCategories(),
+                apiService.getDishes(categoryId)
+            ]).then(([categories, foods]) => {
+                const cat = categories.find(c => String(c.id) === String(categoryId));
+                setCategory(cat || { id: categoryId, name: categoryId });
+                setCategoryFoods(foods || []);
+            }).finally(() => setLoading(false));
+        }
     }, [categoryId]);
 
     return (
@@ -45,12 +62,12 @@ export default function CategoryDetails() {
             </div>
 
             {loading ? (
-                <div className="p-4 grid grid-cols-2 gap-4">
-                    <Skeleton height={140} borderRadius={12} />
-                    <Skeleton height={140} borderRadius={12} />
+                <div className="p-4 flex flex-col gap-3.5 max-w-2xl mx-auto w-full">
+                    <Skeleton height={110} borderRadius={24} />
+                    <Skeleton height={110} borderRadius={24} />
                 </div>
             ) : categoryFoods.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4 p-4">
+                <div className="flex flex-col gap-3.5 p-4 max-w-2xl mx-auto w-full">
                     {categoryFoods.map(food => (
                         <FoodCard
                             key={food.id}
@@ -58,6 +75,8 @@ export default function CategoryDetails() {
                             image={food.images?.[0] || food.image || '/placeholderfood.png'}
                             name={food.name}
                             price={food.basePrice || food.base_price}
+                            description={food.description}
+                            isAvailable={food.is_available !== false}
                         />
                     ))}
                 </div>

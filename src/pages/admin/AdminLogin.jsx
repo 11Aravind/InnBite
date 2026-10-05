@@ -8,17 +8,13 @@ export default function AdminLogin() {
     const navigate = useNavigate();
     const location = useLocation();
     const { login, loading } = useAuth();
-    const { appName } = useSettings();
-
-    const isSuperAdminRoute = location.pathname.startsWith('/superadmin');
+    const { appName, logoUrl } = useSettings();
 
     const [usernameOrEmail, setUsernameOrEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const defaultFrom = isSuperAdminRoute ? '/superadmin' : '/admin';
-    const from = location.state?.from?.pathname || defaultFrom;
-    const targetRole = isSuperAdminRoute ? 'SUPER_ADMIN' : 'ADMIN';
+    const from = location.state?.from?.pathname || '/admin';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,7 +24,7 @@ export default function AdminLogin() {
             usernameOrEmail,
             password,
             authProvider: 'PASSWORD',
-            targetRole
+            targetRole: 'ADMIN'
         });
 
         if (res.success) {
@@ -47,18 +43,18 @@ export default function AdminLogin() {
             <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20 relative z-10">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    {!isSuperAdminRoute && (
-                        <div className="w-14 h-14 bg-[#114536] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#114536]/20">
-                            <ShieldCheck className="w-7 h-7" />
-                        </div>
-                    )}
+                    <div className="w-16 h-16 bg-[#114536] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#114536]/20 p-2">
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={appName} className="max-w-full max-h-full object-contain" />
+                        ) : (
+                            <ShieldCheck className="w-8 h-8" />
+                        )}
+                    </div>
                     <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                        {appName} <span className="text-[#114536]">{isSuperAdminRoute ? 'Super Admin' : 'Admin'}</span> Portal
+                        {appName} <span className="text-[#114536]">Admin</span> Portal
                     </h1>
                     <p className="text-slate-500 text-xs mt-1.5 font-medium">
-                        {isSuperAdminRoute
-                            ? 'Platform configuration & client management console'
-                            : 'Enter authorized credentials to manage restaurant operations'}
+                        Enter authorized credentials to manage restaurant operations
                     </p>
                 </div>
 
@@ -79,7 +75,7 @@ export default function AdminLogin() {
                         <input
                             type="text"
                             required
-                            placeholder={isSuperAdminRoute ? "Enter username" : "admin@innbite.com"}
+                            placeholder="admin@innbite.com"
                             value={usernameOrEmail}
                             onChange={(e) => setUsernameOrEmail(e.target.value)}
                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#114536] transition-all"
@@ -109,7 +105,7 @@ export default function AdminLogin() {
                             <span>Authenticating...</span>
                         ) : (
                             <>
-                                <span>{isSuperAdminRoute ? 'Sign In as Super Admin' : 'Sign In as Admin'}</span>
+                                <span>Sign In as Admin</span>
                                 <LogIn className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                             </>
                         )}
@@ -119,4 +115,3 @@ export default function AdminLogin() {
         </div>
     );
 }
-

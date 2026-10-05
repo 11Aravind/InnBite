@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 import { playOrderChimeSound } from '../../utils/sound';
+import { useSettings } from '../../context/SettingsContext';
+import { printThermalReceipt } from '../../utils/printReceipt';
 import AdminSkeletonTable from '../../components/AdminSkeletonTable';
-import { Receipt, RefreshCw, DollarSign, CreditCard, Bell, Volume2, VolumeX, MessageSquare } from 'lucide-react';
+import { Receipt, RefreshCw, DollarSign, CreditCard, Bell, Volume2, VolumeX, MessageSquare, Printer } from 'lucide-react';
 
 const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
@@ -17,6 +19,7 @@ const formatDateTime = (dateStr) => {
 };
 
 export default function AdminOrders() {
+    const { settings } = useSettings();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterPayment, setFilterPayment] = useState('all');
@@ -243,6 +246,15 @@ export default function AdminOrders() {
                                                 Mark Paid
                                             </button>
                                         )}
+
+                                        <button
+                                            onClick={() => printThermalReceipt(order, settings)}
+                                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors border border-slate-200 flex items-center gap-1.5 cursor-pointer"
+                                            title="Print 80mm Thermal Receipt"
+                                        >
+                                            <Printer className="w-3.5 h-3.5 text-slate-600" />
+                                            <span>Print Receipt</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

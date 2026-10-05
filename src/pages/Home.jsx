@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import SearchResults from '../components/SearchResults';
 import CallButton from '../components/CallButton';
 import FoodCard from '../components/FoodCard';
@@ -19,10 +19,30 @@ import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/o
 
 export default function Home() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { appName, logoUrl } = useSettings();
     const [searchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [showAllCategories, setShowAllCategories] = useState(false);
+
+    useEffect(() => {
+        if (location.hash === '#categories' || searchParams.get('menu') === 'true') {
+            setShowAllCategories(true);
+            setTimeout(() => {
+                const el = document.getElementById('categories-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 150);
+        }
+    }, [location.hash, searchParams]);
+
+    useEffect(() => {
+        const handleShowAll = () => {
+            setShowAllCategories(true);
+        };
+        window.addEventListener('show-all-categories', handleShowAll);
+        return () => window.removeEventListener('show-all-categories', handleShowAll);
+    }, []);
 
     // Active order modal state
     const [activeOrder, setActiveOrder] = useState(null);
@@ -310,7 +330,6 @@ export default function Home() {
                                     Array(2).fill(0).map((_, idx) => (
                                         <div key={idx} className="flex h-full flex-1 flex-col gap-2 rounded-2xl min-w-[280px] sm:min-w-60 snap-start">
                                             <Skeleton height={140} borderRadius={16} />
-                                            <Skeleton width={140} height={18} />
                                         </div>
                                     ))
                                 ) : (
@@ -326,27 +345,66 @@ export default function Home() {
                                                 aspectRatio="aspect-video"
                                                 className="w-full bg-center bg-no-repeat bg-cover rounded-xl flex flex-col"
                                             />
-                                            <p className="text-[#171212] text-base font-medium leading-normal">
-                                                {banner.title}
-                                            </p>
                                         </div>
                                     ))
                                 )}
                             </div>
                         </div>
 
+                        {/* Main Categories Section (Grid System) */}
+                        <div id="categories-section" className="px-4 pt-5 pb-3 scroll-mt-4">
+                            <div className="flex items-center justify-between mb-3.5">
+                                <h2 className="text-[#171212] text-[20px] sm:text-[22px] font-bold leading-tight tracking-[-0.015em]">
+                                    Main Categories
+                                </h2>
+                                {categories.length > 6 ? (
+                                    <button
+                                        onClick={() => setShowAllCategories(!showAllCategories)}
+                                        className="text-xs sm:text-sm font-semibold text-[#82686a] hover:text-[#171212] flex items-center gap-1 transition-colors group"
+                                    >
+                                        {showAllCategories ? 'Show Less' : 'View All'}
+                                        <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${showAllCategories ? 'rotate-90' : 'group-hover:translate-x-0.5'}`} />
+                                    </button>
+                                ) : (
+                                    <div className="text-xs sm:text-sm font-semibold text-[#82686a] flex items-center gap-1 cursor-pointer hover:text-[#171212]">
+                                        View All <ChevronRight className="w-4 h-4" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {apiLoading ? (
+                                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                                    {Array(6).fill(0).map((_, idx) => (
+                                        <div key={idx} className="flex flex-col items-center justify-center p-3 bg-white rounded-2xl border border-gray-100 shadow-xs">
+                                            <Skeleton circle width={56} height={56} className="mb-2" />
+                                            <Skeleton width={50} height={14} />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                                    {(showAllCategories ? categories : categories.slice(0, 6)).map((category) => (
+                                        <CategoryCard
+                                            key={category.id}
+                                            id={category.id}
+                                            image={category.image_url || category.image || '/placeholderfood.png'}
+                                            name={category.name}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         {/* Popular Dishes Section */}
                         <h2 className="text-[#171212] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                             Popular Dishes
                         </h2>
-                        <div className="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            <div className="flex items-stretch p-4 gap-3">
+                        <div className="flex overflow-x-auto overflow-y-hidden [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="flex items-stretch px-4 py-2 gap-3.5">
                                 {apiLoading ? (
                                     Array(3).fill(0).map((_, idx) => (
-                                        <div key={idx} className="w-40">
-                                            <Skeleton height={100} borderRadius={12} />
-                                            <Skeleton height={20} width={80} style={{ marginTop: 8 }} />
-                                            <Skeleton height={16} width={60} />
+                                        <div key={idx} className="w-[300px] shrink-0">
+                                            <Skeleton height={110} borderRadius={24} />
                                         </div>
                                     ))
                                 ) : (
@@ -359,6 +417,7 @@ export default function Home() {
                                             price={dish.basePrice || dish.base_price}
                                             description={dish.description}
                                             isAvailable={dish.is_available !== false}
+                                            className="w-[300px] sm:w-[340px] shrink-0"
                                         />
                                     ))
                                 )}
@@ -369,14 +428,12 @@ export default function Home() {
                         <h2 className="text-[#171212] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                             Today's Specials
                         </h2>
-                        <div className="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            <div className="flex items-stretch p-4 gap-3">
+                        <div className="flex overflow-x-auto overflow-y-hidden [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="flex items-stretch px-4 py-2 gap-3.5">
                                 {apiLoading ? (
                                     Array(2).fill(0).map((_, idx) => (
-                                        <div key={idx} className="w-40">
-                                            <Skeleton height={100} borderRadius={12} />
-                                            <Skeleton height={20} width={80} style={{ marginTop: 8 }} />
-                                            <Skeleton height={16} width={60} />
+                                        <div key={idx} className="w-[300px] shrink-0">
+                                            <Skeleton height={110} borderRadius={24} />
                                         </div>
                                     ))
                                 ) : todaysSpecials.length === 0 ? (
@@ -391,34 +448,11 @@ export default function Home() {
                                             price={item.basePrice || item.base_price}
                                             description={item.description}
                                             isAvailable={item.is_available !== false}
+                                            className="w-[300px] sm:w-[340px] shrink-0"
                                         />
                                     ))
                                 )}
                             </div>
-                        </div>
-
-                        {/* Categories Section */}
-                        <h2 className="text-[#171212] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                            Categories
-                        </h2>
-                        <div className="pb-4">
-                            {apiLoading ? (
-                                Array(4).fill(0).map((_, idx) => (
-                                    <div key={idx} className="flex items-center gap-3 px-4 mb-3">
-                                        <Skeleton circle width={48} height={48} />
-                                        <Skeleton width={120} height={20} />
-                                    </div>
-                                ))
-                            ) : (
-                                categories.map((category) => (
-                                    <CategoryCard
-                                        key={category.id}
-                                        id={category.id}
-                                        image={category.image_url || category.image || '/placeholderfood.png'}
-                                        name={category.name}
-                                    />
-                                ))
-                            )}
                         </div>
                     </>
                 )}

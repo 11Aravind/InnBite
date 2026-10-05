@@ -35,14 +35,16 @@ export default function SearchResults({ results, isLoading }) {
     }
 
     return (
-        <div className="flex flex-wrap gap-4 p-4">
+        <div className="flex flex-col gap-3.5 p-4 max-w-2xl mx-auto w-full">
             {results.map((food) => (
                 <FoodCard
                     key={food.id}
                     id={food.id}
-                    image={food.images[0]}
+                    image={food.images?.[0] || food.image || '/placeholderfood.png'}
                     name={food.name}
-                    price={food.basePrice}
+                    price={food.basePrice || food.base_price}
+                    description={food.description}
+                    isAvailable={food.is_available !== false}
                 />
             ))}
         </div>
