@@ -19,7 +19,6 @@ import {
     Store
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
-import { APP_CONFIG } from '../../config';
 import { useSettings } from '../../context/SettingsContext';
 
 export default function AdminDashboard() {
@@ -167,119 +166,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Payment Options Configuration */}
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
-                        <CreditCard className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h2 className="text-base font-bold text-slate-900">Payment Mode Configuration</h2>
-                        <p className="text-xs text-slate-500">Configure accepted payment methods for customer checkout (Online, Cash at Counter, or Both).</p>
-                    </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-                    {/* Option 1: ONLINE ONLY */}
-                    <div
-                        onClick={async () => {
-                            const updatedMode = 'ONLINE_ONLY';
-                            await updateSettings({ payment_mode: updatedMode });
-                            setSettings(prev => ({ ...prev, payment_mode: updatedMode }));
-                            toast.success('Payment mode updated: Online Payment Only');
-                        }}
-                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${
-                            (settings?.payment_mode || 'BOTH') === 'ONLINE_ONLY'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
-                                <CreditCard className="w-5 h-5" />
-                            </div>
-                            {(settings?.payment_mode || 'BOTH') === 'ONLINE_ONLY' && (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-extrabold text-slate-900">Online Payment Only</h3>
-                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                Mandatory online payment via UPI/Razorpay before order goes to kitchen.
-                            </p>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 w-fit">
-                            Razorpay Mandatory
-                        </span>
-                    </div>
-
-                    {/* Option 2: PAY AT COUNTER */}
-                    <div
-                        onClick={async () => {
-                            const updatedMode = 'PAY_AT_COUNTER';
-                            await updateSettings({ payment_mode: updatedMode });
-                            setSettings(prev => ({ ...prev, payment_mode: updatedMode }));
-                            toast.success('Payment mode updated: Pay at Counter / Shop');
-                        }}
-                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${
-                            settings?.payment_mode === 'PAY_AT_COUNTER'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
-                                <Store className="w-5 h-5" />
-                            </div>
-                            {settings?.payment_mode === 'PAY_AT_COUNTER' && (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-extrabold text-slate-900">Pay at Counter / Shop</h3>
-                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                Orders place instantly. Customers pay cash or card directly at counter.
-                            </p>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 w-fit">
-                            Cash / Counter Pay
-                        </span>
-                    </div>
-
-                    {/* Option 3: BOTH OPTIONS */}
-                    <div
-                        onClick={async () => {
-                            const updatedMode = 'BOTH';
-                            await updateSettings({ payment_mode: updatedMode });
-                            setSettings(prev => ({ ...prev, payment_mode: updatedMode }));
-                            toast.success('Payment mode updated: Hybrid (Both Methods)');
-                        }}
-                        className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-3 ${
-                            (settings?.payment_mode || 'BOTH') === 'BOTH'
-                                ? 'border-[#114536] bg-emerald-50/50 shadow-sm'
-                                : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
-                                <ShoppingBag className="w-5 h-5" />
-                            </div>
-                            {(settings?.payment_mode || 'BOTH') === 'BOTH' && (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-extrabold text-slate-900">Enable Both Methods</h3>
-                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                Customer chooses at checkout: Online UPI or Pay at Cash Counter.
-                            </p>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 text-purple-800 w-fit">
-                            Hybrid Checkout
-                        </span>
-                    </div>
-                </div>
-            </div>
 
             {/* Recent Orders Table */}
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
@@ -352,4 +239,4 @@ export default function AdminDashboard() {
             </div>
         </div>
     );
-}
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../../utils/apiService';
-import { UserCheck, UserX, Plus, Shield, Mail, Key, Sparkles, AlertCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export default function AdminWaiters() {
     const [waiters, setWaiters] = useState([]);
@@ -268,4 +268,4 @@ export default function AdminWaiters() {
             )}
         </div>
     );
-}
+}

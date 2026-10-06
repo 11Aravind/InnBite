@@ -1,6 +1,4 @@
 import React from 'react';
-import QuantityControl from './QuantityControl';
-import { Sparkles, MessageSquare } from 'lucide-react';
 
 const CartItem = ({
     image,

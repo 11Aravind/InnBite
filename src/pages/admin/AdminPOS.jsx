@@ -20,17 +20,14 @@ import {
     X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 export default function AdminPOS() {
     const { settings } = useSettings();
     const [dishes, setDishes] = useState([]);
     const [categories, setCategories] = useState([]);
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
-
     // POS Order State
     const [orderType, setOrderType] = useState('COUNTER'); // 'COUNTER' or 'TABLE'
     const [selectedTable, setSelectedTable] = useState('');
@@ -41,11 +38,9 @@ export default function AdminPOS() {
     const [taxPercent, setTaxPercent] = useState(5); // 5% default GST
     const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash', 'upi', 'card'
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     useEffect(() => {
         loadData();
     }, []);
-
     const loadData = async () => {
         setLoading(true);
         try {
@@ -64,19 +59,19 @@ export default function AdminPOS() {
             setLoading(false);
         }
     };
-
     const handleAddToCart = (dish) => {
         if (dish.is_available === false) {
             toast.error(`${dish.name} is currently out of stock`);
             return;
         }
-
         setCart(prevCart => {
             const existingIndex = prevCart.findIndex(item => item.id === dish.id);
             if (existingIndex > -1) {
-                const updated = [...prevCart];
-                updated[existingIndex].quantity += 1;
-                return updated;
+                return prevCart.map((item, idx) =>
+                    idx === existingIndex
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
+                );
             } else {
                 return [
                     ...prevCart,
@@ -94,7 +89,6 @@ export default function AdminPOS() {
             }
         });
     };
-
     const updateQuantity = (dishId, delta) => {
         setCart(prev =>
             prev
@@ -108,17 +102,14 @@ export default function AdminPOS() {
                 .filter(Boolean)
         );
     };
-
     const updateItemNote = (dishId, note) => {
         setCart(prev =>
             prev.map(item => (item.id === dishId ? { ...item, note } : item))
         );
     };
-
     const removeItem = (dishId) => {
         setCart(prev => prev.filter(item => item.id !== dishId));
     };
-
     const clearCart = () => {
         setCart([]);
         setDiscountAmount(0);
@@ -126,29 +117,24 @@ export default function AdminPOS() {
         setCustomerPhone('');
         setSelectedTable('');
     };
-
     // Calculation math
     const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const discount = Math.min(Number(discountAmount) || 0, subtotal);
     const taxableAmount = Math.max(0, subtotal - discount);
     const taxAmount = (taxableAmount * (Number(taxPercent) || 0)) / 100;
     const grandTotal = Math.max(0, taxableAmount + taxAmount);
-
     const handleCreateOrder = async (shouldPrint = false) => {
         if (cart.length === 0) {
             toast.error('Please add at least one item to the order');
             return;
         }
-
         if (orderType === 'TABLE' && !selectedTable) {
             toast.error('Please select a table number');
             return;
         }
-
         setIsSubmitting(true);
         try {
             const tableObj = tables.find(t => String(t.table_number) === String(selectedTable));
-
             const orderPayload = {
                 table_id: orderType === 'TABLE' ? tableObj?.id || null : null,
                 table_number: orderType === 'TABLE' ? selectedTable : null,
@@ -170,14 +156,11 @@ export default function AdminPOS() {
                     special_instruction: item.note || ''
                 }))
             };
-
             const createdOrder = await apiService.saveOrder(orderPayload);
             toast.success(`POS Order #${createdOrder.order_number || createdOrder.id || ''} created successfully!`);
-
             if (shouldPrint) {
                 printThermalReceipt(createdOrder || { ...orderPayload, id: Date.now() }, settings);
             }
-
             clearCart();
         } catch (err) {
             console.error('POS order error:', err);
@@ -186,13 +169,11 @@ export default function AdminPOS() {
             setIsSubmitting(false);
         }
     };
-
     const filteredDishes = dishes.filter(d => {
         const matchesCat = selectedCategory === 'ALL' || String(d.category_id) === String(selectedCategory);
         const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCat && matchesSearch;
     });
-
     return (
         <div className="space-y-4 text-slate-900 font-sans">
             {/* Header */}
@@ -203,7 +184,6 @@ export default function AdminPOS() {
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">Quick counter billing, instant order creation & 80mm thermal receipt printing</p>
                 </div>
-
                 <div className="flex items-center gap-2">
                     <button
                         onClick={loadData}
@@ -214,7 +194,6 @@ export default function AdminPOS() {
                     </button>
                 </div>
             </div>
-
             {/* Main Split Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 {/* Left Side: Category Tabs & Dish Grid (7 Cols) */}
@@ -239,7 +218,6 @@ export default function AdminPOS() {
                                 </button>
                             )}
                         </div>
-
                         {/* Category Pills */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                             <button
@@ -259,7 +237,6 @@ export default function AdminPOS() {
                             ))}
                         </div>
                     </div>
-
                     {/* Dish Grid */}
                     {loading ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -277,7 +254,6 @@ export default function AdminPOS() {
                                 const price = Number(dish.base_price || dish.price || 0);
                                 const isAvailable = dish.is_available !== false;
                                 const imgUrl = dish.images?.[0] || dish.image_url || '/placeholder-food.png';
-
                                 return (
                                     <div
                                         key={dish.id}
@@ -302,9 +278,13 @@ export default function AdminPOS() {
                                                 <span className="text-[11px] font-black text-emerald-700">₹{price.toFixed(2)}</span>
                                             </div>
                                         </div>
-
                                         <button
+                                            type="button"
                                             disabled={!isAvailable}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (isAvailable) handleAddToCart(dish);
+                                            }}
                                             className="mt-2 w-full py-1.5 bg-slate-100 group-hover:bg-[#114536] group-hover:text-white text-slate-800 text-[11px] font-bold rounded-xl flex items-center justify-center gap-1 transition-colors"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
@@ -316,14 +296,12 @@ export default function AdminPOS() {
                         </div>
                     )}
                 </div>
-
                 {/* Right Side: Order Cart & POS Billing Summary (5 Cols) */}
                 <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 p-4 space-y-4 shadow-sm">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                         <h2 className="font-black text-slate-900 text-base flex items-center gap-2">
                             Current Order <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
                         </h2>
-
                         {cart.length > 0 && (
                             <button
                                 onClick={clearCart}
@@ -334,7 +312,6 @@ export default function AdminPOS() {
                             </button>
                         )}
                     </div>
-
                     {/* Order Details & Customer Header Inputs */}
                     <div className="space-y-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                         {/* Order Type Toggle */}
@@ -354,7 +331,6 @@ export default function AdminPOS() {
                                 Table Order
                             </button>
                         </div>
-
                         {orderType === 'TABLE' && (
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Select Table #</label>
@@ -370,7 +346,6 @@ export default function AdminPOS() {
                                 </select>
                             </div>
                         )}
-
                         <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">Customer Name</label>
@@ -394,7 +369,6 @@ export default function AdminPOS() {
                             </div>
                         </div>
                     </div>
-
                     {/* Cart Items List */}
                     <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
                         {cart.length === 0 ? (
@@ -408,7 +382,6 @@ export default function AdminPOS() {
                                         <span className="font-bold text-slate-900 line-clamp-1">{item.name}</span>
                                         <span className="font-black text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
-
                                     <div className="flex items-center justify-between pt-1">
                                         <input
                                             type="text"
@@ -417,7 +390,6 @@ export default function AdminPOS() {
                                             onChange={(e) => updateItemNote(item.id, e.target.value)}
                                             className="w-1/2 bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] text-slate-700 outline-none"
                                         />
-
                                         <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1">
                                             <button
                                                 onClick={() => updateQuantity(item.id, -1)}
@@ -444,14 +416,12 @@ export default function AdminPOS() {
                             ))
                         )}
                     </div>
-
                     {/* Calculation Breakdown & Payment Options */}
                     <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
                         <div className="flex justify-between font-medium text-slate-600">
                             <span>Subtotal</span>
                             <span className="font-mono font-bold text-slate-900">₹{subtotal.toFixed(2)}</span>
                         </div>
-
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-slate-600 font-medium">Discount (₹)</span>
                             <input
@@ -462,7 +432,6 @@ export default function AdminPOS() {
                                 className="w-24 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right font-mono font-bold outline-none text-xs"
                             />
                         </div>
-
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-slate-600 font-medium">GST / Tax (%)</span>
                             <input
@@ -473,12 +442,10 @@ export default function AdminPOS() {
                                 className="w-24 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right font-mono font-bold outline-none text-xs"
                             />
                         </div>
-
                         <div className="flex justify-between font-black text-sm pt-2 border-t border-slate-200 text-slate-900">
                             <span>Grand Total</span>
                             <span className="font-mono text-emerald-700 text-base">₹{grandTotal.toFixed(2)}</span>
                         </div>
-
                         {/* Payment Method Selector */}
                         <div className="pt-2">
                             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Payment Method</label>
@@ -509,7 +476,6 @@ export default function AdminPOS() {
                                 </button>
                             </div>
                         </div>
-
                         {/* Order Action Buttons */}
                         <div className="grid grid-cols-2 gap-2 pt-3">
                             <button
@@ -520,7 +486,6 @@ export default function AdminPOS() {
                                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                                 Save Order
                             </button>
-
                             <button
                                 disabled={isSubmitting || cart.length === 0}
                                 onClick={() => handleCreateOrder(true)}

@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { apiService } from '../../utils/apiService';
 import { AdminSkeletonCards } from '../../components/AdminSkeletonTable';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
-import { Plus, Printer, Trash2, QrCode, Sparkles, ShieldOff, CheckCircle } from 'lucide-react';
+import { Plus, Printer, Trash2, Sparkles, ShieldOff, CheckCircle } from 'lucide-react';
 
 export default function AdminTables() {
     const [tables, setTables] = useState([]);
@@ -242,4 +242,4 @@ export default function AdminTables() {
             />
         </div>
     );
-}
+}

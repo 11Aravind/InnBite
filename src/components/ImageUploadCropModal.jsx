@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
-import { X, ZoomIn, Crop, Upload, Check, Link as LinkIcon, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { X, ZoomIn, Crop, Upload, Check, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
 import toast from 'react-hot-toast';
 
@@ -283,4 +283,4 @@ export function ImageFileInput({
             />
         </div>
     );
-}
+}

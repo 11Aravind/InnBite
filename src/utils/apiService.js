@@ -498,7 +498,8 @@ export const apiService = {
             taste_profile: dishPayload.tasteProfile || dishPayload.taste_profile || [],
             is_popular: Boolean(dishPayload.is_popular || dishPayload.isPopular),
             is_special: Boolean(dishPayload.is_special || dishPayload.isSpecial),
-            is_available: dishPayload.is_available !== false
+            is_available: dishPayload.is_available !== false,
+            is_veg: dishPayload.is_veg !== undefined ? Boolean(dishPayload.is_veg) : dishPayload.isVeg !== undefined ? Boolean(dishPayload.isVeg) : true
         };
         const { data, error } = await supabase.from('dishes').upsert([supabasePayload]).select().single();
         if (error) throw error;

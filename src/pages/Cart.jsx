@@ -6,7 +6,7 @@ import { apiService } from '../utils/apiService';
 import { getOrCreateCustomerSession } from '../utils/session';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
-import { ChefHat, Check, Clock, CreditCard, Sparkles, Utensils, AlertCircle, Store, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CreditCard, AlertCircle, Store, CheckCircle2 } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
 import { useSettings } from '../context/SettingsContext';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
@@ -378,7 +378,7 @@ export default function Cart() {
                             />
                         </div>
 
-                        {/* Payment Method Selector based on Superadmin Setting */}
+                        {/* Payment Method Selector based on App Settings */}
                         <div className="px-4 py-4 space-y-3 border-t border-[#f4f1f1]">
                             <h3 className="text-[#171312] text-lg font-bold leading-tight tracking-[-0.015em]">
                                 Payment Option
@@ -496,4 +496,4 @@ export default function Cart() {
             )}
         </div>
     );
-}
+}

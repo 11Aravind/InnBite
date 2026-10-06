@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
-import { ChefHat, Check, Clock, CreditCard, X, RefreshCw, Sparkles, UtensilsCrossed, FileText, MessageSquare } from 'lucide-react';
+import { ChefHat, Check, CreditCard, X, RefreshCw, MessageSquare } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
 import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
 
@@ -301,4 +301,4 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
             </div>
         </div>
     );
-}
+}

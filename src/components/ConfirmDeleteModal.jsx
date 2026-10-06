@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 
 export default function ConfirmDeleteModal({
     isOpen,
@@ -63,4 +63,4 @@ export default function ConfirmDeleteModal({
             </div>
         </div>
     );
-}
+}

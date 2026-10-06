@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import QuantityControl from '../components/QuantityControl';
 import { useCart } from 'react-use-cart';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
-import { Sparkles, MessageSquare, Plus, Check, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Check, ShoppingCart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { showAddToCartToast } from '../utils/toastUtils';
-import { APP_CONFIG } from '../config';
 import { useSettings } from '../context/SettingsContext';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
     const { appName, settings } = useSettings();
     const { foodId } = useParams();
-    const { addItem, totalUniqueItems } = useCart();
+    const { addItem, totalUniqueItems, items, updateItemQuantity, removeItem } = useCart();
 
     const initialData = apiService.getDishByIdSync(foodId);
     const [foodData, setFoodData] = useState(initialData);
@@ -78,6 +76,22 @@ const FoodDetails = () => {
         : [{ value: "regular", label: "Regular", price: Number(foodData.basePrice || foodData.base_price || 0) }];
 
     const portionObj = portions.find(p => p.value === selectedPortion) || portions[0];
+    const portionLabel = portionObj?.label || 'Regular';
+
+    // Check if the current selected size/portion item is already in the cart
+    const existingCartItem = (items || []).find(item => {
+        const matchesDish = String(item.dish_id || item.id).startsWith(String(foodData?.id));
+        const matchesPortion = item.portion === portionLabel || String(item.id).includes(`-${selectedPortion || 'reg'}-`);
+        return matchesDish && matchesPortion;
+    });
+
+    const isInCart = Boolean(existingCartItem);
+    const currentQty = isInCart ? existingCartItem.quantity : quantity;
+
+    useEffect(() => {
+        setQuantity(1);
+    }, [selectedPortion]);
+
     const basePrice = Number(foodData.basePrice || foodData.base_price || 0);
     const price = (portionObj?.price !== undefined ? Number(portionObj.price) : (basePrice * (portionObj?.multiplier || 1))).toFixed(2);
     const images = foodData.images && foodData.images.length > 0 ? foodData.images : ['/placeholderfood.png'];
@@ -108,6 +122,27 @@ const FoodDetails = () => {
         : typeof (foodData.tasteProfile || foodData.taste_profile) === 'string'
             ? (foodData.tasteProfile || foodData.taste_profile).split(',').map(s => s.trim()).filter(Boolean)
             : [];
+
+    const handleDecreaseQty = () => {
+        if (isInCart && existingCartItem) {
+            if (existingCartItem.quantity > 1) {
+                updateItemQuantity(existingCartItem.id, existingCartItem.quantity - 1);
+            } else {
+                removeItem(existingCartItem.id);
+                toast.success(`Removed ${foodData.name} (${portionLabel}) from cart`, { id: 'remove-cart-toast' });
+            }
+        } else {
+            setQuantity(prev => Math.max(1, prev - 1));
+        }
+    };
+
+    const handleIncreaseQty = () => {
+        if (isInCart && existingCartItem) {
+            updateItemQuantity(existingCartItem.id, existingCartItem.quantity + 1);
+        } else {
+            setQuantity(prev => prev + 1);
+        }
+    };
 
     const handleBack = () => {
         navigate(-1);
@@ -320,37 +355,48 @@ const FoodDetails = () => {
                 <div className="pb-[84px]"></div>
             </div>
 
-            {/* Bottom Add to Cart Floating Bar */}
+            {/* Bottom Add to Cart / Go to Cart Floating Bar */}
             <div className="flex justify-stretch fixed rounded-t-lg bottom-0 left-0 right-0 bg-white shadow-[0_-2px_6px_-1px_rgba(0,0,0,0.1)] z-30">
                 <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between max-w-lg mx-auto w-full">
-                    <div className="flex min-w-[84px] items-center justify-between rounded-full h-12 px-2 bg-[#f4f1f1] text-[#171312]">
-                        <button type="button" onClick={() => setQuantity(prev => Math.max(1, prev - 1))} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer">-</button>
-                        <span className="font-bold text-base w-4 text-center">{quantity}</span>
-                        <button type="button" onClick={() => setQuantity(prev => prev + 1)} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer">+</button>
+                    <div className="flex min-w-[96px] items-center justify-between rounded-full h-12 px-2 bg-[#f4f1f1] text-[#171312]">
+                        <button type="button" onClick={handleDecreaseQty} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer hover:bg-black/5 rounded-full transition-colors">-</button>
+                        <span className="font-bold text-base min-w-[20px] text-center">{currentQty}</span>
+                        <button type="button" onClick={handleIncreaseQty} className="w-10 h-10 flex items-center justify-center text-xl font-bold cursor-pointer hover:bg-black/5 rounded-full transition-colors">+</button>
                     </div>
-                    <button
-                        type="button"
-                        onClick={handleAddToCart}
-                        disabled={settings?.is_closed || foodData?.is_available === false}
-                        className={`flex flex-1 max-w-[480px] items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-transform ${
-                            settings?.is_closed || foodData?.is_available === false
-                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                : 'bg-[#edc3ba] text-[#171312] active:scale-95 cursor-pointer'
-                        }`}
-                    >
-                        {!settings?.is_closed && foodData?.is_available !== false && (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
-                            </svg>
-                        )}
-                        <span className="truncate">
-                            {settings?.is_closed
-                                ? 'Shop is Closed'
-                                : foodData?.is_available === false
-                                    ? 'Out of Stock'
-                                    : 'Add Item'}
-                        </span>
-                    </button>
+                    {isInCart ? (
+                        <button
+                            type="button"
+                            onClick={() => navigate('/cart')}
+                            className="flex flex-1 max-w-[480px] items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-all bg-[#114536] text-white hover:bg-[#0d362a] active:scale-95 cursor-pointer shadow-md"
+                        >
+                            <ShoppingCart className="w-5 h-5 stroke-[2.5]" />
+                            <span className="truncate">Go to Cart →</span>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleAddToCart}
+                            disabled={settings?.is_closed || foodData?.is_available === false}
+                            className={`flex flex-1 max-w-[480px] items-center justify-center overflow-hidden rounded-full h-12 px-5 text-base font-bold leading-normal tracking-[0.015em] gap-2 transition-transform ${
+                                settings?.is_closed || foodData?.is_available === false
+                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    : 'bg-[#edc3ba] text-[#171312] active:scale-95 cursor-pointer'
+                            }`}
+                        >
+                            {!settings?.is_closed && foodData?.is_available !== false && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M222.14,58.87A8,8,0,0,0,216,56H54.68L49.79,29.14A16,16,0,0,0,34.05,16H16a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,0,0,16h18L59.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,152,204a28,28,0,1,0,28-28H83.17a8,8,0,0,1-7.87-6.57L72.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,222.14,58.87Z" />
+                                </svg>
+                            )}
+                            <span className="truncate">
+                                {settings?.is_closed
+                                    ? 'Shop is Closed'
+                                    : foodData?.is_available === false
+                                        ? 'Out of Stock'
+                                        : 'Add Item'}
+                            </span>
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

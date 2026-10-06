@@ -77,6 +77,8 @@ export default function CategoryDetails() {
                             price={food.basePrice || food.base_price}
                             description={food.description}
                             isAvailable={food.is_available !== false}
+                            isPopular={Boolean(food.is_popular || food.isPopular)}
+                            isSpecial={Boolean(food.is_special || food.isSpecial)}
                         />
                     ))}
                 </div>

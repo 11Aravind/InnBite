@@ -5,7 +5,7 @@ import { playOrderChimeSound } from '../../utils/sound';
 import { useSettings } from '../../context/SettingsContext';
 import { printThermalReceipt } from '../../utils/printReceipt';
 import AdminSkeletonTable from '../../components/AdminSkeletonTable';
-import { Receipt, RefreshCw, DollarSign, CreditCard, Bell, Volume2, VolumeX, MessageSquare, Printer } from 'lucide-react';
+import { Receipt, RefreshCw, CreditCard, Volume2, VolumeX, MessageSquare, Printer } from 'lucide-react';
 
 const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
@@ -264,4 +264,4 @@ export default function AdminOrders() {
             )}
         </div>
     );
-}
+}

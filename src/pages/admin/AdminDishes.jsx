@@ -149,6 +149,7 @@ export default function AdminDishes() {
                 isPopular: Boolean(dish.is_popular || dish.isPopular),
                 isSpecial: Boolean(dish.is_special || dish.isSpecial),
                 isAvailable: dish.is_available !== undefined ? dish.is_available : true,
+                isVeg: dish.is_veg !== undefined ? Boolean(dish.is_veg) : dish.isVeg !== undefined ? Boolean(dish.isVeg) : true,
                 portions: initialPortions
             });
         } else {
@@ -172,6 +173,7 @@ export default function AdminDishes() {
                 isPopular: false,
                 isSpecial: false,
                 isAvailable: true,
+                isVeg: true,
                 portions: initialPortions,
                 ingredientsList: ''
             });
@@ -240,7 +242,8 @@ export default function AdminDishes() {
                 : formData.tasteProfile,
             is_popular: formData.isPopular,
             is_special: formData.isSpecial,
-            is_available: formData.isAvailable
+            is_available: formData.isAvailable,
+            is_veg: formData.isVeg !== false
         };
 
         setIsSaving(true);
@@ -918,6 +921,30 @@ export default function AdminDishes() {
                                 </div>
                             </div>
 
+                            {/* Dietary Type Selector (Veg / Non-Veg) */}
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
+                                <label className="text-xs font-bold text-slate-800 block">Dietary Type</label>
+                                <div className="flex gap-3 text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isVeg: true })}
+                                        className={`flex-1 py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${formData.isVeg !== false ? 'bg-emerald-50 text-emerald-900 border-emerald-300 shadow-xs' : 'bg-white text-slate-600 border-slate-200'}`}
+                                    >
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0" />
+                                        <span>Vegetarian (Veg)</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isVeg: false })}
+                                        className={`flex-1 py-2 px-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${formData.isVeg === false ? 'bg-rose-50 text-rose-900 border-rose-300 shadow-xs' : 'bg-white text-slate-600 border-slate-200'}`}
+                                    >
+                                        <span className="w-2.5 h-2.5 rounded-full bg-rose-600 shrink-0" />
+                                        <span>Non-Vegetarian (Non-Veg)</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="flex flex-wrap gap-4 pt-2">
                                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
                                     <input
@@ -988,4 +1015,4 @@ export default function AdminDishes() {
             />
         </div>
     );
-}
+}

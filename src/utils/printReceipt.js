@@ -1,16 +1,19 @@
 /**
  * Utility for rendering and printing standard 80mm thermal receipts
+ * includes Address, GSTIN, Phone, Bill No, Unit Price, Qty, CGST, SGST, and Round off
  */
 
 export function printThermalReceipt(order, settings = {}) {
     if (!order) return;
 
-    const restaurantName = settings.restaurantName || settings.appName || 'InnBite Restaurant';
-    const address = settings.address || 'Main Street, City Center';
-    const phone = settings.phone || settings.contactPhone || '';
-    const gstNo = settings.gstNo || settings.taxId || '';
+    const restaurantName = settings.restaurantName || settings.appName || settings.restaurant_name || 'InnBite Restaurant';
+    const address = settings.address || settings.contact_address || '';
+    const phone = settings.phone || settings.contact_phone || settings.contactPhone || '';
+    const gstNo = settings.gstNo || settings.gst_no || settings.taxId || settings.tax_id || '';
 
+    const billNo = order.bill_no || order.billNo || order.order_number || order.id;
     const items = order.order_items || order.items || [];
+    
     const dateStr = order.created_at
         ? new Date(order.created_at).toLocaleString('en-IN', {
             dateStyle: 'short',
@@ -35,17 +38,47 @@ export function printThermalReceipt(order, settings = {}) {
 
     const isPaid = order.payment_status === 'SUCCESS' || order.payment_status === 'paid';
 
-    const subtotal = Number(order.subtotal || order.total_amount || 0);
+    // Calculate total quantity
+    const totalQty = items.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
+
+    // Calculate item subtotal
+    const calculatedItemsTotal = items.reduce((sum, item) => {
+        const qty = Number(item.quantity) || 1;
+        const price = Number(item.unit_price_snapshot || item.unit_price || item.price || 0);
+        return sum + (price * qty);
+    }, 0);
+
+    const subtotal = Number(order.subtotal || calculatedItemsTotal || 0);
     const discount = Number(order.discount || 0);
-    const tax = Number(order.tax_amount || order.tax || 0);
-    const grandTotal = Number(order.total_amount || (subtotal - discount + tax));
+
+    // Extract dynamic CGST & SGST rates from settings (default 2.5% each)
+    const cgstRate = settings.cgstRate !== undefined ? Number(settings.cgstRate) : (settings.cgst_rate !== undefined ? Number(settings.cgst_rate) : 2.5);
+    const sgstRate = settings.sgstRate !== undefined ? Number(settings.sgstRate) : (settings.sgst_rate !== undefined ? Number(settings.sgst_rate) : 2.5);
+
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const rawTax = Number(order.tax_amount || order.tax || 0);
+    let cgst = 0;
+    let sgst = 0;
+
+    if (rawTax > 0) {
+        cgst = rawTax / 2;
+        sgst = rawTax / 2;
+    } else {
+        cgst = Number((taxableAmount * (cgstRate / 100)).toFixed(2));
+        sgst = Number((taxableAmount * (sgstRate / 100)).toFixed(2));
+    }
+
+    const exactTotal = subtotal - discount + cgst + sgst;
+    const finalGrandTotal = Math.round(exactTotal);
+    const roundOff = finalGrandTotal - exactTotal;
+    const roundOffStr = (roundOff >= 0 ? '+' : '') + roundOff.toFixed(2);
 
     const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Receipt - Order #${order.order_number || order.id}</title>
+      <title>Receipt - Bill No #${billNo}</title>
       <style>
         @page {
           size: 80mm auto;
@@ -56,7 +89,7 @@ export function printThermalReceipt(order, settings = {}) {
           margin: 0 auto;
           padding: 8px 4px;
           font-family: 'Courier New', Courier, monospace, sans-serif;
-          font-size: 12px;
+          font-size: 11px;
           line-height: 1.3;
           color: #000;
           background: #fff;
@@ -78,21 +111,23 @@ export function printThermalReceipt(order, settings = {}) {
           margin: 4px 0;
         }
         th, td {
-          padding: 2px 0;
+          padding: 3px 0;
           vertical-align: top;
         }
         th {
           border-bottom: 1px dashed #000;
-          text-align: left;
-          font-size: 11px;
-        }
-        .item-name { width: 55%; font-weight: bold; }
-        .item-qty { width: 15%; text-align: center; }
-        .item-amt { width: 30%; text-align: right; }
-        .notes {
           font-size: 10px;
+          font-weight: bold;
+        }
+        .col-item { width: 44%; text-align: left; font-weight: bold; }
+        .col-price { width: 18%; text-align: right; }
+        .col-qty { width: 14%; text-align: center; font-weight: bold; }
+        .col-total { width: 24%; text-align: right; font-weight: bold; }
+
+        .notes {
+          font-size: 9px;
           font-style: italic;
-          padding-left: 8px;
+          padding-left: 6px;
         }
         .total-row {
           display: flex;
@@ -115,17 +150,19 @@ export function printThermalReceipt(order, settings = {}) {
       </style>
     </head>
     <body>
+      <!-- Header: Restaurant Name, Address, Contact & GSTIN -->
       <div class="text-center">
-        <div class="bold" style="font-size: 16px;">${restaurantName.toUpperCase()}</div>
+        <div class="bold" style="font-size: 15px;">${restaurantName.toUpperCase()}</div>
         ${address ? `<div>${address}</div>` : ''}
         ${phone ? `<div>Ph: ${phone}</div>` : ''}
-        ${gstNo ? `<div>GSTIN: ${gstNo}</div>` : ''}
+        ${gstNo ? `<div class="bold">GSTIN: ${gstNo}</div>` : ''}
       </div>
 
       <div class="double-dashed-line"></div>
 
+      <!-- Bill No & Order Details -->
       <div>
-        <div class="bold">Order #: ${order.order_number || order.id}</div>
+        <div class="bold" style="font-size: 12px;">Bill No: #${billNo}</div>
         <div>Date: ${dateStr}</div>
         <div>Type: ${tableLabel}</div>
         ${order.customer_name ? `<div>Customer: ${order.customer_name}</div>` : ''}
@@ -134,58 +171,77 @@ export function printThermalReceipt(order, settings = {}) {
 
       <div class="dashed-line"></div>
 
+      <!-- Item Table with ITEM, PRICE (Unit Price), QTY (Quantity), TOTAL -->
       <table>
         <thead>
           <tr>
-            <th class="item-name">ITEM</th>
-            <th class="item-qty">QTY</th>
-            <th class="item-amt">AMT (₹)</th>
+            <th class="col-item">ITEM</th>
+            <th class="col-price">PRICE</th>
+            <th class="col-qty">QTY</th>
+            <th class="col-total">TOTAL</th>
           </tr>
         </thead>
         <tbody>
           ${items.map(item => {
-        const name = item.dish_name || item.name || 'Item';
-        const qty = item.quantity || 1;
-        const price = Number(item.unit_price_snapshot || item.unit_price || item.price || 0);
-        const total = (price * qty).toFixed(2);
-        const portion = item.portion_label ? ` (${item.portion_label})` : '';
-        const note = item.special_instruction || item.specialInstruction || '';
-        return `
+            const name = item.dish_name || item.name || 'Item';
+            const qty = item.quantity || 1;
+            const unitPrice = Number(item.unit_price_snapshot || item.unit_price || item.price || 0);
+            const total = (unitPrice * qty).toFixed(2);
+            const portion = item.portion_label || item.portion ? ` (${item.portion_label || item.portion})` : '';
+            const note = item.special_instruction || item.specialInstruction || '';
+            return `
               <tr>
-                <td class="item-name">${name}${portion}</td>
-                <td class="item-qty">${qty}</td>
-                <td class="item-amt">${total}</td>
+                <td class="col-item">${name}${portion}</td>
+                <td class="col-price">${unitPrice.toFixed(2)}</td>
+                <td class="col-qty">${qty}</td>
+                <td class="col-total">${total}</td>
               </tr>
-              ${note ? `<tr><td colspan="3" class="notes">* Note: ${note}</td></tr>` : ''}
+              ${note ? `<tr><td colspan="4" class="notes">* Note: ${note}</td></tr>` : ''}
             `;
-    }).join('')}
+          }).join('')}
         </tbody>
       </table>
 
       <div class="dashed-line"></div>
 
+      <!-- Summary: Total Qty, Subtotal, CGST, SGST, Round off, Grand Total -->
       <div>
-        ${subtotal > 0 ? `
-          <div class="total-row">
-            <span>Subtotal:</span>
-            <span>₹${subtotal.toFixed(2)}</span>
-          </div>
-        ` : ''}
+        <div class="total-row">
+          <span>Total Qty: <strong class="bold">${totalQty}</strong></span>
+          <span>Sub Total: &nbsp;<strong>${subtotal.toFixed(2)}</strong></span>
+        </div>
+
         ${discount > 0 ? `
           <div class="total-row">
             <span>Discount:</span>
-            <span>- ₹${discount.toFixed(2)}</span>
+            <span>- ${discount.toFixed(2)}</span>
           </div>
         ` : ''}
-        ${tax > 0 ? `
+
+        ${cgstRate > 0 || cgst > 0 ? `
           <div class="total-row">
-            <span>GST / Tax:</span>
-            <span>+ ₹${tax.toFixed(2)}</span>
+            <span>CGST@${cgstRate}%:</span>
+            <span>${cgst.toFixed(2)}</span>
           </div>
         ` : ''}
+
+        ${sgstRate > 0 || sgst > 0 ? `
+          <div class="total-row">
+            <span>SGST@${sgstRate}%:</span>
+            <span>${sgst.toFixed(2)}</span>
+          </div>
+        ` : ''}
+
+        <div class="dashed-line"></div>
+
+        <div class="total-row">
+          <span>Round off</span>
+          <span>${roundOffStr}</span>
+        </div>
+
         <div class="total-row grand-total">
-          <span>TOTAL:</span>
-          <span>₹${grandTotal.toFixed(2)}</span>
+          <span>Grand Total</span>
+          <span>₹${finalGrandTotal.toFixed(2)}</span>
         </div>
       </div>
 
