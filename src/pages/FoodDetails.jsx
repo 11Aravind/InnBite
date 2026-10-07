@@ -5,6 +5,7 @@ import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 import ImageWithSkeleton from '../components/ImageWithSkeleton';
 import { Check, ShoppingCart } from 'lucide-react';
+import VegNonVegSymbol from '../components/VegNonVegSymbol';
 import { toast } from 'react-hot-toast';
 import { showAddToCartToast } from '../utils/toastUtils';
 import { useSettings } from '../context/SettingsContext';
@@ -230,6 +231,14 @@ const FoodDetails = () => {
 
                 {/* Title & Price */}
                 <div className="flex items-center justify-between px-4 pb-1 pt-5 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 w-full mb-1">
+                        <VegNonVegSymbol isVeg={foodData.is_veg !== false && foodData.isVeg !== false} size="md" />
+                        {(foodData.is_popular || foodData.isPopular || foodData.is_special || foodData.isSpecial) && (
+                            <span className="text-amber-700 text-xs font-black flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                                <span>★</span> {foodData.is_special || foodData.isSpecial ? "Chef's Special" : "Bestseller"}
+                            </span>
+                        )}
+                    </div>
                     <h1 className="text-[#171312] text-[22px] font-bold leading-tight tracking-[-0.015em] text-left">
                         {foodData.name}
                     </h1>

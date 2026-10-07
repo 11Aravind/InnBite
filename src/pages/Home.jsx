@@ -13,16 +13,83 @@ import { apiService } from '../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { secureStorage } from '../utils/secureStorage';
 import { useSettings } from '../context/SettingsContext';
-import { Utensils, ChevronRight, Clock, Search, X, XCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
+import { Utensils, ChevronRight, Clock, Search, X, XCircle, Navigation, ChevronDown, User, Mic, Phone } from 'lucide-react';
 import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
 
 export default function Home() {
+    const handleCall = () => {
+        window.location.href = 'tel:+1234567890';
+    };
+
     const navigate = useNavigate();
     const location = useLocation();
     const { appName, logoUrl } = useSettings();
     const [searchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const { isAuthenticated, userRole } = useAuth();
+    const [isListening, setIsListening] = useState(false);
+
+    const handleMicClick = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            toast.error("Voice search is not supported in this browser.", { id: 'mic-toast' });
+            return;
+        }
+
+        try {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                setIsListening(true);
+                toast('🎙️ Listening... Speak dish name (e.g. Pizza)', { id: 'mic-toast', duration: 4000 });
+            };
+
+            recognition.onresult = (event) => {
+                const spokenText = event.results[0][0].transcript;
+                if (spokenText) {
+                    setSearchQuery(spokenText);
+                    searchFoods(spokenText);
+                    toast.success(`Searching for "${spokenText}"`, { id: 'mic-toast' });
+                }
+                setIsListening(false);
+            };
+
+            recognition.onerror = (err) => {
+                console.error('Speech recognition error:', err);
+                setIsListening(false);
+                toast.error('Voice search failed. Please type search term.', { id: 'mic-toast' });
+            };
+
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+
+            recognition.start();
+        } catch (e) {
+            console.error('Speech mic error:', e);
+            toast.error('Could not start voice search.', { id: 'mic-toast' });
+        }
+    };
+
+    const handleProfileClick = () => {
+        if (isAuthenticated) {
+            if (userRole === 'ADMIN') {
+                navigate('/admin');
+            } else if (userRole === 'WAITER') {
+                navigate('/waiter');
+            } else {
+                navigate('/admin/login');
+            }
+        } else {
+            navigate('/admin/login');
+        }
+    };
     const [showAllCategories, setShowAllCategories] = useState(false);
 
     useEffect(() => {
@@ -217,24 +284,86 @@ export default function Home() {
             )}
 
             <div>
-                {/* Header with Brand & Table Badge */}
-                <div className="flex items-center bg-white p-4 pb-2 justify-between">
-                    <div
-                        className="text-[#171212] flex size-12 shrink-0 items-center cursor-pointer"
-                        onClick={() => navigate('/')}
-                    >
-                        <img src={logoUrl || '/logo.svg'} alt={appName} className="w-8 h-8 object-contain" />
-                    </div>
-                    <div className="flex flex-col items-center flex-1">
-                        <h2 className="text-[#171212] text-lg font-bold leading-tight tracking-[-0.015em]">
-                            {appName}
-                        </h2>
-                        <div className="flex items-center gap-1 bg-[#f4f1f1] px-2 py-0.5 rounded-full mt-0.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span className="text-[#171212] text-xs font-semibold">Table #{tableNumber}</span>
+                {/* Premium Emerald Forest Green Header Banner */}
+                <div className="bg-gradient-to-r from-[#072b21] via-[#0d3b2e] to-[#072b21] px-4 pt-4 pb-4 shadow-lg rounded-b-[28px] border-b border-[#144d3d]/40 relative overflow-hidden">
+                    {/* Background Decorative Gradient Highlight */}
+                    <div className="absolute top-0 right-0 w-36 h-36 opacity-10 pointer-events-none select-none bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-300 via-transparent to-transparent" />
+
+                    {/* Top Row: Brand Logo, Name & Call Button */}
+                    <div className="flex items-center justify-between gap-3 relative z-10">
+                        {/* Left: White Circle Logo & Brand Name Column */}
+                        <div
+                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
+                            onClick={() => navigate('/')}
+                        >
+                            {/* White Circle Badge with Green Utensils / Logo */}
+                            <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0 shadow-md border border-white/20">
+                                {logoUrl ? (
+                                    <img src={logoUrl} alt={appName} className="w-7 h-7 object-contain rounded-full" />
+                                ) : (
+                                    <Utensils className="w-6 h-6 text-[#114536] stroke-[2.2]" />
+                                )}
+                            </div>
+
+                            {/* Brand Name Title & Tagline Subtitle */}
+                            <div className="flex flex-col min-w-0 justify-center">
+                                <h1 className="text-white text-xl sm:text-2xl font-black tracking-tight leading-none flex items-center">
+                                    <span>Inn</span>
+                                    <span className="text-[#f59e0b] ml-0.5">Bite</span>
+                                </h1>
+                                <p className="text-white/75 text-[11px] sm:text-xs font-medium tracking-tight leading-tight mt-0.5 truncate">
+                                    Good Food · Happy Moments
+                                </p>
+                            </div>
                         </div>
+
+                        {/* Right: Translucent Glass Call Button with Glowing Status Dot */}
+                        <button
+                            type="button"
+                            onClick={handleCall}
+                            className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 flex items-center justify-center text-white shadow-lg transition-all shrink-0 relative cursor-pointer backdrop-blur-xs"
+                            title="Call Support / Waiter"
+                        >
+                            <Phone className="w-5 h-5 text-white" />
+                            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0d3b2e] animate-pulse" />
+                        </button>
                     </div>
-                    <CallButton />
+
+                    {/* Integrated Search Bar Row */}
+                    <div className="relative flex items-center w-full h-12 rounded-full bg-white shadow-xl border border-white/40 px-4 mt-3.5 transition-all focus-within:ring-2 focus-within:ring-emerald-400 group">
+                        <Search className="w-5 h-5 text-slate-400 shrink-0 group-focus-within:text-[#114536] transition-colors" />
+
+                        <input
+                            placeholder="Search for 'Pizza' or any dish..."
+                            className="h-full w-full bg-transparent pl-3 pr-2 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                        />
+
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                className="p-1 text-slate-400 hover:text-slate-700 transition-colors rounded-full hover:bg-slate-100 mr-1 cursor-pointer"
+                                onClick={() => setSearchQuery('')}
+                                title="Clear search"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        )}
+
+                        {/* Divider Line */}
+                        <div className="h-5 w-[1.5px] bg-slate-200 mx-2 shrink-0" />
+
+                        {/* Microphone Icon Button */}
+                        <button
+                            type="button"
+                            onClick={handleMicClick}
+                            className={`p-1.5 rounded-full hover:bg-emerald-50 active:scale-90 transition-all cursor-pointer ${isListening ? 'animate-bounce text-emerald-700' : 'text-[#114536]'}`}
+                            title="Voice Search"
+                        >
+                            <Mic className="w-5 h-5 text-[#114536]" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Shop Closed Banner */}
@@ -278,31 +407,7 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* Search Bar */}
-                <div className="px-4 pb-3 pt-2">
-                    <div className="relative flex items-center w-full h-12 rounded-2xl bg-slate-50 border border-slate-200/90 shadow-2xs focus-within:bg-white focus-within:border-[#114536] focus-within:ring-3 focus-within:ring-[#114536]/15 transition-all duration-200 group">
-                        <div className="absolute left-3.5 flex items-center justify-center pointer-events-none">
-                            <Search className="w-5 h-5 text-slate-400 group-focus-within:text-[#114536] transition-colors" />
-                        </div>
-
-                        <input
-                            placeholder="Search for food, ingredients..."
-                            className="h-full w-full bg-transparent pl-11 pr-10 text-sm font-medium text-[#171212] placeholder:text-slate-400 focus:outline-none"
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                        />
-
-                        {searchQuery && (
-                            <button
-                                className="absolute right-3 p-1 text-slate-400 hover:text-slate-700 transition-colors rounded-full hover:bg-slate-100"
-                                onClick={() => setSearchQuery('')}
-                                title="Clear search"
-                            >
-                                <XCircle className="w-5 h-5" />
-                            </button>
-                        )}
-                    </div>
-                </div>
+                
 
                 {/* Main Content or Search Results */}
                 {searchQuery.trim().length > 0 ? (
