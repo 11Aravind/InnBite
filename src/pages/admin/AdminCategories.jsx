@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
 import DataTable from '../../components/DataTable';
 import { ImageFileInput } from '../../components/ImageUploadCropModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
+import { validateCategoryForm, sanitizeInput } from '../../utils/validation';
 import {
     Plus,
     Edit2,
@@ -52,6 +53,15 @@ export default function AdminCategories() {
 
     const handleSave = async (e) => {
         e.preventDefault();
+
+        const cleanName = sanitizeInput(name);
+        const cleanDesc = sanitizeInput(description);
+        const validation = validateCategoryForm({ name: cleanName });
+        if (!validation.isValid) {
+            toast.error(Object.values(validation.errors)[0]);
+            return;
+        }
+
         if (!imageUrl) {
             toast.error('Please upload a category image');
             return;
@@ -60,11 +70,11 @@ export default function AdminCategories() {
         try {
             await apiService.saveCategory({
                 id: editingCategory?.id,
-                name,
-                description,
+                name: cleanName,
+                description: cleanDesc,
                 image_url: imageUrl
             });
-            toast.success(`Category "${name}" saved successfully!`);
+            toast.success(`Category "${cleanName}" saved successfully!`);
             setIsModalOpen(false);
             loadData();
         } catch (err) {
@@ -222,6 +232,7 @@ export default function AdminCategories() {
                                 <input
                                     type="text"
                                     required
+                                    maxLength={40}
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full h-11 bg-slate-50 border border-slate-200 px-3.5 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary font-medium"
@@ -239,6 +250,7 @@ export default function AdminCategories() {
                                 <label className="text-xs font-bold text-slate-700 block mb-1">Description</label>
                                 <textarea
                                     rows="2"
+                                    maxLength={300}
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm outline-none text-slate-900 focus:border-themePrimary"
