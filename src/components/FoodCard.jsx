@@ -1,42 +1,78 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from 'react-use-cart';
 import ImageWithSkeleton from './ImageWithSkeleton';
+import VegNonVegSymbol from './VegNonVegSymbol';
+import DishPreviewModal from './DishPreviewModal';
 import { showAddToCartToast } from '../utils/toastUtils';
-import { Leaf, Plus, Minus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 
 export default function FoodCard({
     id,
     image,
+    images,
     name,
     price,
+    basePrice,
+    base_price,
     description,
+    preparation,
     isAvailable = true,
     isPopular = false,
     isSpecial = false,
     isVeg = true,
+    portions,
     className = ''
 }) {
     const navigate = useNavigate();
     const { addItem, updateItemQuantity, removeItem, getItem } = useCart();
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const cartItem = getItem(id);
     const quantity = cartItem ? cartItem.quantity : 0;
 
+    const displayImage = (images && images.length > 0) ? images[0] : (image || '/placeholderfood.png');
+    const rawPrice = Number(basePrice || base_price || price || 0);
+    const formattedPrice = rawPrice.toFixed(2);
+
+    const hasPortions = portions && portions.length > 1;
+
+    const handleAddClick = (e) => {
+        e.stopPropagation();
+        if (!isAvailable) return;
+        if (hasPortions) {
+            setIsPreviewOpen(true);
+        } else {
+            if (cartItem) {
+                updateItemQuantity(id, quantity + 1);
+            } else {
+                addItem({
+                    id,
+                    name,
+                    price: rawPrice,
+                    image: displayImage,
+                    description
+                }, 1);
+                showAddToCartToast(name, navigate);
+            }
+        }
+    };
+
     const handleIncrease = (e) => {
         e.stopPropagation();
         if (!isAvailable) return;
-        if (cartItem) {
+        if (hasPortions) {
+            setIsPreviewOpen(true);
+        } else if (cartItem) {
             updateItemQuantity(id, quantity + 1);
         } else {
             addItem({
                 id,
                 name,
-                price: Number(price || 0),
-                image: image || '/placeholderfood.png',
+                price: rawPrice,
+                image: displayImage,
                 description
             }, 1);
-            showAddToCartToast(name, navigate);
         }
     };
 
@@ -50,114 +86,138 @@ export default function FoodCard({
         }
     };
 
-    const toggleFavorite = (e) => {
+    const handleOpenPreview = (e) => {
         e.stopPropagation();
-        setIsFavorite(prev => !prev);
+        setIsPreviewOpen(true);
     };
 
-    const formattedPrice = typeof price === 'number' ? price.toFixed(2) : Number(price || 0).toFixed(2);
-
     return (
-        <div
-            className={`bg-white border border-slate-100/90 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md rounded-3xl p-3 sm:p-3.5 flex gap-3.5 items-center transition-all duration-200 group cursor-pointer ${!isAvailable ? 'opacity-75' : ''} ${className}`}
-            onClick={() => navigate(`/FoodDetails/${id}`)}
-        >
-            {/* Left Food Image Container */}
-            <div className="relative w-28 h-28 shrink-0 overflow-hidden rounded-2xl bg-slate-50 border border-slate-100">
-                <ImageWithSkeleton
-                    src={image}
-                    alt={name}
-                    aspectRatio="aspect-square"
-                    className={`w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-300 ${!isAvailable ? 'grayscale-[60%]' : ''}`}
-                />
+        <>
+            <div
+                className={`bg-white border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md rounded-3xl p-3.5 flex gap-4 items-start justify-between transition-all duration-200 group cursor-pointer relative ${!isAvailable ? 'opacity-75' : ''} ${className}`}
+                onClick={handleOpenPreview}
+            >
+                {/* Left Side: Details Column */}
+                <div className="flex flex-col justify-between flex-1 min-w-0 pr-1 self-stretch">
+                    <div className="space-y-1">
+                        {/* Top Indicator & Bestseller Badge */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <VegNonVegSymbol isVeg={isVeg} size="sm" />
+                            {(isPopular || isSpecial) && (
+                                <span className="text-rose-600 font-extrabold text-[11px] tracking-tight flex items-center gap-0.5">
+                                    <span className="text-rose-500">🌟</span>
+                                    <span>{isSpecial ? "Chef's Special" : "Bestseller"}</span>
+                                </span>
+                            )}
+                        </div>
 
-                {/* Top-Left Compact Special Badge (Theme Emerald - Single line) */}
-                {isSpecial && (
-                    <span className="absolute top-1.5 left-1.5 bg-[#114536]/90 backdrop-blur-xs text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
-                        Chef's Special
-                    </span>
-                )}
-
-                {!isAvailable && (
-                    <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center text-white text-[10px] font-black uppercase tracking-wider text-center p-1 rounded-2xl">
-                        Out of Stock
-                    </span>
-                )}
-            </div>
-
-            {/* Right Details Container */}
-            <div className="flex flex-1 flex-col justify-between self-stretch py-0.5 min-w-0">
-                <div className="space-y-0.5">
-                    {/* Header: Name & Price */}
-                    <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-slate-900 text-sm font-extrabold leading-snug line-clamp-2 flex-1">
+                        {/* Dish Name */}
+                        <h3 className="text-slate-900 text-base font-extrabold leading-snug line-clamp-2 group-hover:text-[#114536] transition-colors">
                             {name}
                         </h3>
-                        <span className="text-slate-900 text-base font-black shrink-0 ml-1">
-                            ₹{formattedPrice}
-                        </span>
-                    </div>
 
-                    {/* Description */}
-                    {description && (
-                        <p className="text-slate-400 text-[11px] font-normal leading-normal line-clamp-2">
-                            {description}
-                        </p>
-                    )}
+                        {/* Price */}
+                        <div className="text-slate-900 text-sm font-black tracking-tight">
+                            ₹{formattedPrice}
+                        </div>
+
+                        {/* Short Description + Clickable "... more" */}
+                        {description && (
+                            <p className="text-slate-500 text-xs font-medium leading-relaxed line-clamp-2 mt-1">
+                                {description}{' '}
+                                <button
+                                    type="button"
+                                    onClick={handleOpenPreview}
+                                    className="text-slate-900 font-bold hover:underline ml-0.5 inline-block cursor-pointer"
+                                >
+                                    more
+                                </button>
+                            </p>
+                        )}
+                    </div>
                 </div>
 
-                {/* Bottom Row: Badges (NO STAR ICON) + Quantity Stepper */}
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-1.5">
-                    {/* Badges */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        {isVeg !== false ? (
-                            <span className="bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
-                                <Leaf className="w-3 h-3 text-emerald-600 shrink-0" />
-                                <span>Vegetarian</span>
-                            </span>
-                        ) : (
-                            <span className="bg-rose-50 text-rose-800 border border-rose-200/60 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
-                                <span>Non-Veg</span>
-                            </span>
-                        )}
+                {/* Right Side: Image & Overlaid ADD Button (Swiggy / Zomato style) */}
+                <div className="relative w-32 sm:w-36 h-32 sm:h-36 shrink-0 flex flex-col items-center">
+                    <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-2xs relative">
+                        <ImageWithSkeleton
+                            src={displayImage}
+                            alt={name}
+                            aspectRatio="aspect-square"
+                            className={`w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-300 ${!isAvailable ? 'grayscale-[60%]' : ''}`}
+                        />
 
-                        {isPopular && (
-                            <span className="bg-amber-50 text-amber-800 border border-amber-200/60 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                Popular
-                            </span>
+                        {!isAvailable && (
+                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center text-white text-[10px] font-black uppercase tracking-wider text-center p-1 rounded-2xl">
+                                Out of Stock
+                            </div>
                         )}
                     </div>
 
-                    {/* Quantity Stepper (Theme Emerald Primary + Button - NO ORANGE) */}
-                    <div
-                        className="bg-slate-50 border border-slate-200/80 rounded-full p-1 flex items-center gap-2 shadow-2xs ml-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            className="w-6 h-6 rounded-full bg-slate-200/70 hover:bg-slate-300 active:scale-90 transition-all flex items-center justify-center font-bold text-xs text-slate-800 disabled:opacity-40 cursor-pointer"
-                            onClick={handleDecrease}
-                            disabled={quantity === 0 || !isAvailable}
-                        >
-                            <Minus className="w-3 h-3" />
-                        </button>
+                    {/* Overlaid ADD Button / Quantity Control Pill */}
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10">
+                        {quantity > 0 ? (
+                            <div
+                                className="bg-white border border-slate-200/90 rounded-xl px-2 py-1 flex items-center gap-2 shadow-md text-[#114536]"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={handleDecrease}
+                                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-90 transition-all flex items-center justify-center font-bold text-slate-800"
+                                >
+                                    <Minus className="w-3 h-3" />
+                                </button>
 
-                        <span className="text-xs font-black text-slate-900 w-3 text-center select-none">
-                            {quantity}
-                        </span>
+                                <span className="text-xs font-extrabold text-[#114536] w-4 text-center select-none">
+                                    {quantity}
+                                </span>
 
-                        <button
-                            type="button"
-                            className="w-6 h-6 rounded-full bg-[#114536] hover:bg-[#0c382b] text-white active:scale-95 transition-all flex items-center justify-center font-bold text-xs disabled:opacity-40 cursor-pointer shadow-xs"
-                            onClick={handleIncrease}
-                            disabled={!isAvailable}
-                        >
-                            <Plus className="w-3 h-3 text-white" />
-                        </button>
+                                <button
+                                    type="button"
+                                    onClick={handleIncrease}
+                                    className="w-6 h-6 rounded-lg bg-[#114536] text-white hover:bg-[#0c382b] active:scale-95 transition-all flex items-center justify-center font-bold shadow-xs"
+                                >
+                                    <Plus className="w-3 h-3 text-white" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={!isAvailable}
+                                onClick={handleAddClick}
+                                className="bg-white hover:bg-emerald-50/60 border border-slate-200/90 text-[#114536] font-extrabold text-xs px-5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transition-all active:scale-95 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                            >
+                                ADD
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* Quick Dish Preview & Portion Selection Popup Modal */}
+            {isPreviewOpen && (
+                <DishPreviewModal
+                    isOpen={isPreviewOpen}
+                    onClose={() => setIsPreviewOpen(false)}
+                    dish={{
+                        id,
+                        name,
+                        image,
+                        images,
+                        price,
+                        basePrice,
+                        base_price,
+                        description,
+                        preparation,
+                        isAvailable,
+                        isPopular,
+                        isSpecial,
+                        isVeg,
+                        portions
+                    }}
+                />
+            )}
+        </>
     );
 }

@@ -73,12 +73,17 @@ export default function CategoryDetails() {
                             key={food.id}
                             id={food.id}
                             image={food.images?.[0] || food.image || '/placeholderfood.png'}
+                            images={food.images}
                             name={food.name}
                             price={food.basePrice || food.base_price}
+                            basePrice={food.basePrice || food.base_price}
                             description={food.description}
+                            preparation={food.preparation || food.preparation_details}
                             isAvailable={food.is_available !== false}
                             isPopular={Boolean(food.is_popular || food.isPopular)}
                             isSpecial={Boolean(food.is_special || food.isSpecial)}
+                            isVeg={food.is_veg !== false && food.isVeg !== false}
+                            portions={food.portions}
                         />
                     ))}
                 </div>
