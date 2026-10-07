@@ -26,7 +26,18 @@ DROP TABLE IF EXISTS restaurant_settings;
 CREATE TABLE restaurant_settings (
     restaurant_id VARCHAR PRIMARY KEY,
     restaurant_name VARCHAR NOT NULL,
+    app_name VARCHAR DEFAULT 'InnBite',
+    phone VARCHAR DEFAULT '',
+    contact_phone VARCHAR DEFAULT '',
+    address TEXT DEFAULT '',
+    gst_no VARCHAR DEFAULT '',
+    tax_id VARCHAR DEFAULT '',
+    cgst_rate NUMERIC(5,2) DEFAULT 2.50,
+    sgst_rate NUMERIC(5,2) DEFAULT 2.50,
     service_mode VARCHAR NOT NULL DEFAULT 'TABLE_SERVICE',
+    payment_mode VARCHAR DEFAULT 'BOTH',
+    theme_color VARCHAR DEFAULT 'emerald',
+    logo_url TEXT DEFAULT '/logo/innbite-logo.png',
     common_qr_code VARCHAR,
     common_qr_status VARCHAR DEFAULT 'active'
 );
