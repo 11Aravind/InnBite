@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { validateAdminLoginForm, sanitizeInput } from '../../utils/validation';
 import { ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
 
 export default function AdminLogin() {
@@ -20,8 +21,15 @@ export default function AdminLogin() {
         e.preventDefault();
         setErrorMessage('');
 
+        const cleanUsername = sanitizeInput(usernameOrEmail);
+        const validation = validateAdminLoginForm({ email: cleanUsername, password });
+        if (!validation.isValid) {
+            setErrorMessage(Object.values(validation.errors)[0]);
+            return;
+        }
+
         const res = await login({
-            usernameOrEmail,
+            usernameOrEmail: cleanUsername,
             password,
             authProvider: 'PASSWORD',
             targetRole: 'ADMIN'
@@ -75,6 +83,7 @@ export default function AdminLogin() {
                         <input
                             type="text"
                             required
+                            maxLength={100}
                             placeholder="admin@innbite.com"
                             value={usernameOrEmail}
                             onChange={(e) => setUsernameOrEmail(e.target.value)}
@@ -89,6 +98,7 @@ export default function AdminLogin() {
                         <input
                             type="password"
                             required
+                            maxLength={64}
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
