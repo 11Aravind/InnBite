@@ -9,14 +9,17 @@ import {
     Edit2,
     Trash2,
     Utensils,
-    Star,
     Sparkles,
     X,
     SlidersHorizontal,
     CheckCircle2,
     XCircle,
     Check,
-    RefreshCw
+    RefreshCw,
+    ArrowUp,
+    ArrowDown,
+    ChevronsUp,
+    ChevronsDown
 } from 'lucide-react';
 
 export default function AdminDishes() {
@@ -57,6 +60,49 @@ export default function AdminDishes() {
         };
         setFormData({ ...formData, portions: updatedPortions });
         setEditingPortionIdx(null);
+    };
+
+    // Image Position Reordering Handlers (Move Top, Move Up, Move Down, Move Bottom, Remove)
+    const handleMoveImageUp = (idx) => {
+        if (idx <= 0 || !formData.images) return;
+        const updated = [...formData.images];
+        const temp = updated[idx];
+        updated[idx] = updated[idx - 1];
+        updated[idx - 1] = temp;
+        setFormData({ ...formData, images: updated });
+    };
+
+    const handleMoveImageDown = (idx) => {
+        if (!formData.images || idx >= formData.images.length - 1) return;
+        const updated = [...formData.images];
+        const temp = updated[idx];
+        updated[idx] = updated[idx + 1];
+        updated[idx + 1] = temp;
+        setFormData({ ...formData, images: updated });
+    };
+
+    const handleMoveImageTop = (idx) => {
+        if (idx <= 0 || !formData.images) return;
+        const updated = [...formData.images];
+        const [target] = updated.splice(idx, 1);
+        updated.unshift(target);
+        setFormData({ ...formData, images: updated });
+        toast.success(`Moved image to Position #1 (Top / Primary Image)`);
+    };
+
+    const handleMoveImageBottom = (idx) => {
+        if (!formData.images || idx >= formData.images.length - 1) return;
+        const updated = [...formData.images];
+        const [target] = updated.splice(idx, 1);
+        updated.push(target);
+        setFormData({ ...formData, images: updated });
+        toast.success(`Moved image to Bottom position`);
+    };
+
+    const handleRemoveImage = (idx) => {
+        if (!formData.images) return;
+        const updated = formData.images.filter((_, i) => i !== idx);
+        setFormData({ ...formData, images: updated });
     };
 
     // Ingredient Customization Form State
@@ -141,7 +187,7 @@ export default function AdminDishes() {
                 preparation: dish.preparation || dish.preparation_details || '',
                 basePrice: dish.basePrice || dish.base_price || '',
                 category: dish.category || dish.category_id || '',
-                images: (dish.images && Array.isArray(dish.images)) ? dish.images.slice(0, 3) : (dish.image || dish.image_url ? [dish.image || dish.image_url] : []),
+                images: (dish.images && Array.isArray(dish.images)) ? dish.images.slice(0, 5) : (dish.image || dish.image_url ? [dish.image || dish.image_url] : []),
                 ingredients: parsedIngredients,
                 allergens: Array.isArray(dish.allergens) ? dish.allergens.join(', ') : '',
                 ingredientsList: Array.isArray(dish.ingredients_list) ? dish.ingredients_list.join(', ') : '',
@@ -767,39 +813,140 @@ export default function AdminDishes() {
                                     </div>
                                 </div>
 
-                                {/* Right Column: Dish Images */}
+                                {/* Right Column: Dish Images & Position Reordering Controls */}
                                 <div className="lg:col-span-5">
                                     <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 h-full">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-xs font-bold text-slate-800">Dish Images (Max 3)</label>
-                                            <span className="text-[10px] font-semibold text-slate-500">{formData.images?.length || 0}/3 uploaded</span>
+                                            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                                <span>Dish Images</span>
+                                                <span className="text-[10px] text-slate-500 font-normal">(Reorder & Set Primary)</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-[#114536] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                                {formData.images?.length || 0}/5 uploaded
+                                            </span>
                                         </div>
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {[0, 1, 2].map((idx) => {
-                                                // Only show slot if it has an image or is next in line to upload
-                                                if (idx > 0 && (!formData.images || idx > formData.images.length)) return null;
 
-                                                return (
-                                                    <div key={idx} className="relative">
-                                                        <ImageFileInput
-                                                            value={formData.images?.[idx] || ''}
-                                                            onChange={(croppedImg) => {
-                                                                let newImages = [...(formData.images || [])];
-                                                                if (croppedImg) {
-                                                                    newImages[idx] = croppedImg;
-                                                                } else {
-                                                                    newImages = newImages.filter((_, i) => i !== idx);
-                                                                }
-                                                                setFormData({ ...formData, images: newImages });
-                                                            }}
-                                                            label={idx === 0 ? "Primary Dish Image" : `Additional Image #${idx + 1}`}
-                                                            aspect={1 / 1}
-                                                            dimensions="800 x 800 px (1:1 Square)"
-                                                            required={idx === 0}
-                                                        />
+                                        {/* Uploaded Images List with Position Controls */}
+                                        <div className="space-y-3">
+                                            {formData.images && formData.images.map((imgUrl, idx) => (
+                                                <div key={idx} className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs space-y-2.5 transition-all">
+                                                    {/* Card Header: Position Badge & Remove Button */}
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-1.5">
+                                                            {idx === 0 ? (
+                                                                <span className="px-2 py-0.5 bg-[#114536] text-white text-[11px] font-extrabold rounded-full flex items-center gap-1 shadow-xs">
+                                                                    <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
+                                                                    <span>Top / Primary Image</span>
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-extrabold rounded-full border border-slate-200">
+                                                                    Position #{idx + 1}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveImage(idx)}
+                                                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Remove image"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
-                                                );
-                                            })}
+
+                                                    {/* Image Preview / Crop Picker */}
+                                                    <ImageFileInput
+                                                        value={imgUrl}
+                                                        onChange={(croppedImg) => {
+                                                            let newImages = [...(formData.images || [])];
+                                                            if (croppedImg) {
+                                                                newImages[idx] = croppedImg;
+                                                            } else {
+                                                                newImages = newImages.filter((_, i) => i !== idx);
+                                                            }
+                                                            setFormData({ ...formData, images: newImages });
+                                                        }}
+                                                        label={idx === 0 ? "Primary Image" : `Image #${idx + 1}`}
+                                                        aspect={1 / 1}
+                                                        dimensions="800 x 800 px (1:1 Square)"
+                                                        required={idx === 0}
+                                                    />
+
+                                                    {/* Position Control Buttons (Move Top, Move Up, Move Down, Move Bottom) */}
+                                                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 flex-wrap">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Change Position:</span>
+                                                        <div className="flex items-center gap-1">
+                                                            {/* Move to Top (Primary) */}
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === 0}
+                                                                onClick={() => handleMoveImageTop(idx)}
+                                                                className="px-2 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#114536] hover:border-emerald-300 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 flex items-center gap-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                                title="Move to Position #1 (Primary / Top Image)"
+                                                            >
+                                                                <ChevronsUp className="w-3.5 h-3.5" />
+                                                                <span>Top</span>
+                                                            </button>
+
+                                                            {/* Move Up 1 Step */}
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === 0}
+                                                                onClick={() => handleMoveImageUp(idx)}
+                                                                className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                                title="Move Up 1 Position"
+                                                            >
+                                                                <ArrowUp className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            {/* Move Down 1 Step */}
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === formData.images.length - 1}
+                                                                onClick={() => handleMoveImageDown(idx)}
+                                                                className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-slate-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                                title="Move Down 1 Position"
+                                                            >
+                                                                <ArrowDown className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            {/* Move to Bottom */}
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === formData.images.length - 1}
+                                                                onClick={() => handleMoveImageBottom(idx)}
+                                                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 flex items-center gap-0.5 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                                title="Move to Bottom Position"
+                                                            >
+                                                                <ChevronsDown className="w-3.5 h-3.5" />
+                                                                <span>Bottom</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Add New Image Slot (if under max 5) */}
+                                            {(!formData.images || formData.images.length < 5) && (
+                                                <div className="bg-white border-2 border-dashed border-slate-200 hover:border-[#114536]/50 rounded-2xl p-3 transition-colors">
+                                                    <ImageFileInput
+                                                        value=""
+                                                        onChange={(croppedImg) => {
+                                                            if (croppedImg) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    images: [...(formData.images || []), croppedImg]
+                                                                });
+                                                            }
+                                                        }}
+                                                        label={!formData.images || formData.images.length === 0 ? "+ Upload Primary Dish Image *" : `+ Add Image #${(formData.images?.length || 0) + 1}`}
+                                                        aspect={1 / 1}
+                                                        dimensions="800 x 800 px (1:1 Square)"
+                                                        required={!formData.images || formData.images.length === 0}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
