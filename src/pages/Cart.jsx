@@ -12,6 +12,7 @@ import { addActiveOrderToStorage } from '../utils/orderUtils';
 import { useSettings } from '../context/SettingsContext';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { toast } from 'react-hot-toast';
+import FloatingMenuButton from '../components/FloatingMenuButton';
 
 export default function Cart() {
     const navigate = useNavigate();
@@ -249,9 +250,10 @@ export default function Cart() {
                     onClose={() => navigate('/')}
                     onOrderMore={() => navigate('/')}
                 />
-            </div>
-        );
-    }
+            <FloatingMenuButton />
+        </div>
+    );
+}
 
     return (
         <div className="container relative flex size-full min-h-screen flex-col bg-white justify-between max-w-lg mx-auto font-sans">
@@ -500,6 +502,7 @@ export default function Cart() {
                     <div className="h-5 bg-white sm:hidden"></div>
                 </div>
             )}
+            <FloatingMenuButton />
         </div>
     );
 }

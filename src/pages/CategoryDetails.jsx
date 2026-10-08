@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import FoodCard from '../components/FoodCard';
 import CallButton from '../components/CallButton';
 import BottomNavigation from '../components/BottomNavigation';
+import FloatingMenuButton from '../components/FloatingMenuButton';
 import { apiService } from '../utils/apiService';
 import Skeleton from 'react-loading-skeleton';
 
@@ -14,34 +15,35 @@ export default function CategoryDetails() {
     const cachedFoods = apiService.getDishesSync(categoryId);
 
     const [category, setCategory] = useState(() => {
+        if (categoryId === 'popular') return { id: 'popular', name: 'Recommended Dishes' };
+        if (categoryId === 'special') return { id: 'special', name: "Chef's Special" };
         if (cachedCats) {
-            return cachedCats.find(c => String(c.id) === String(categoryId)) || { id: categoryId, name: categoryId };
+            return cachedCats.find(c => String(c.id).toLowerCase() === String(categoryId).toLowerCase() || String(c.name).toLowerCase() === String(categoryId).toLowerCase()) || { id: categoryId, name: categoryId };
         }
         return null;
     });
     const [categoryFoods, setCategoryFoods] = useState(cachedFoods || []);
-    const [loading, setLoading] = useState(!cachedFoods);
+    const [loading, setLoading] = useState(!cachedFoods || cachedFoods.length === 0);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        const syncCats = apiService.getCategoriesSync();
-        const syncFoods = apiService.getDishesSync(categoryId);
-        if (syncCats && syncFoods) {
-            const cat = syncCats.find(c => String(c.id) === String(categoryId));
-            setCategory(cat || { id: categoryId, name: categoryId });
-            setCategoryFoods(syncFoods);
-            setLoading(false);
-        } else {
-            setLoading(true);
-            Promise.all([
-                apiService.getCategories(),
-                apiService.getDishes(categoryId)
-            ]).then(([categories, foods]) => {
-                const cat = categories.find(c => String(c.id) === String(categoryId));
-                setCategory(cat || { id: categoryId, name: categoryId });
-                setCategoryFoods(foods || []);
-            }).finally(() => setLoading(false));
-        }
+        setLoading(true);
+        Promise.all([
+            apiService.getCategories(),
+            apiService.getDishes(categoryId)
+        ]).then(([categories, foods]) => {
+            if (categoryId === 'popular') {
+                setCategory({ id: 'popular', name: 'Recommended Dishes' });
+            } else if (categoryId === 'special') {
+                setCategory({ id: 'special', name: "Chef's Special" });
+            } else {
+                const cat = categories.find(c => String(c.id).toLowerCase() === String(categoryId).toLowerCase() || String(c.name).toLowerCase() === String(categoryId).toLowerCase());
+                setCategory(cat || { id: categoryId, name: String(categoryId).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) });
+            }
+            setCategoryFoods(foods || []);
+        }).catch(err => {
+            console.error('Error fetching category details:', err);
+        }).finally(() => setLoading(false));
     }, [categoryId]);
 
     return (
@@ -108,6 +110,9 @@ export default function CategoryDetails() {
                     </p>
                 </div>
             )}
+            {/* Bottom spacing so items are not cut off by fixed BottomNavigation */}
+            <div className="h-28 sm:h-32" />
+            <FloatingMenuButton />
             <BottomNavigation />
         </div>
     );

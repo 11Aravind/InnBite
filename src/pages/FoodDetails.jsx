@@ -9,6 +9,7 @@ import VegNonVegSymbol from '../components/VegNonVegSymbol';
 import { toast } from 'react-hot-toast';
 import { showAddToCartToast } from '../utils/toastUtils';
 import { useSettings } from '../context/SettingsContext';
+import FloatingMenuButton from '../components/FloatingMenuButton';
 
 const FoodDetails = () => {
     const navigate = useNavigate();
@@ -408,6 +409,7 @@ const FoodDetails = () => {
                     )}
                 </div>
             </div>
+            <FloatingMenuButton />
         </div>
     );
 };

@@ -5,7 +5,6 @@ export default function BottomNavigation() {
     const navigate = useNavigate();
     const location = useLocation();
     const isHome = location.pathname === '/' && !location.hash;
-    const isMenu = location.pathname === '/' && location.hash === '#categories';
     const isCart = location.pathname === '/cart';
 
     const handleHomeClick = (e) => {
@@ -17,28 +16,6 @@ export default function BottomNavigation() {
             if (location.hash) {
                 navigate('/', { replace: true });
             }
-        }
-    };
-
-    const handleMenuClick = (e) => {
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent('show-all-categories'));
-        const scrollToCategories = () => {
-            const el = document.getElementById('categories-section');
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-            }
-        };
-
-        if (location.pathname !== '/') {
-            navigate('/#categories');
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('show-all-categories'));
-                scrollToCategories();
-            }, 150);
-        } else {
-            navigate('/#categories', { replace: true });
-            scrollToCategories();
         }
     };
 
@@ -74,30 +51,6 @@ export default function BottomNavigation() {
                 </p>
             </a>
 
-            {/* Menu Option */}
-            <a
-                className={`flex flex-1 flex-col items-center justify-end gap-1 ${isMenu ? 'text-[#114536]' : 'text-[#82686a]'}`}
-                href="/#categories"
-                onClick={handleMenuClick}
-            >
-                <div
-                    className={`flex h-8 items-center justify-center ${isMenu ? 'text-[#114536]' : 'text-[#82686a]'}`}
-                    data-icon="Utensils"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24px"
-                        height="24px"
-                        fill="currentColor"
-                        viewBox="0 0 256 256"
-                    >
-                        <path d="M80,32a8,8,0,0,0-8,8V88H64V40a8,8,0,0,0-16,0V88a24,24,0,0,0,24,24v96a8,8,0,0,0,16,0V112A24,24,0,0,0,112,88V40a8,8,0,0,0-16,0V88H88V40A8,8,0,0,0,80,32ZM208,32a8,8,0,0,0-7.39,4.93l-32,80A8,8,0,0,0,176,128h24v80a8,8,0,0,0,16,0V40A8,8,0,0,0,208,32Z"></path>
-                    </svg>
-                </div>
-                <p className={`text-xs font-medium leading-normal tracking-[0.015em] ${isMenu ? 'text-[#114536] font-bold' : 'text-[#82686a]'}`}>
-                    Menu
-                </p>
-            </a>
 
             {/* Cart Option */}
             <a

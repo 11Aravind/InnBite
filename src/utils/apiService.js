@@ -24,6 +24,28 @@ export const invalidateMenuCache = () => {
     menuCache.dishMap.clear();
 };
 
+export const getCategoryPriority = (name) => {
+    const n = (name || '').toLowerCase();
+    if (n.includes('main')) return 1;
+    if (n.includes('beverage') || n.includes('drink')) return 2;
+    if (n.includes('starter') || n.includes('appetizer')) return 3;
+    if (n.includes('chinese') || n.includes('chineese')) return 4;
+    if (n.includes('dessert') || n.includes('desert')) return 5;
+    if (n.includes('combo') || n.includes('commbo')) return 6;
+    return 99;
+};
+
+export const sortCategoriesByPriority = (cats) => {
+    if (!Array.isArray(cats)) return [];
+    return [...cats].sort((a, b) => {
+        const orderA = typeof a.display_order === 'number' && a.display_order > 0 ? a.display_order : getCategoryPriority(a.name);
+        const orderB = typeof b.display_order === 'number' && b.display_order > 0 ? b.display_order : getCategoryPriority(b.name);
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.name || '').localeCompare(b.name || '');
+    });
+};
+
+
 export const apiService = {
     // ----------------------------------------------------
     // RESTAURANT SETTINGS & SERVICE MODE
@@ -221,7 +243,8 @@ export const apiService = {
 
         const banners = bannersRes.data || [];
         const allDishes = dishesRes.data || [];
-        const categories = categoriesRes.data || [];
+        const categories = sortCategoriesByPriority(categoriesRes.data || []);
+
 
         // Pre-fill dish map & cache
         menuCache.dishes = allDishes;
@@ -254,10 +277,24 @@ export const apiService = {
 
     getDishesSync(categoryId = null) {
         if (menuCache.dishes) {
-            if (categoryId) {
-                return menuCache.dishes.filter(d => String(d.category_id || d.categoryId) === String(categoryId));
+            if (!categoryId) return menuCache.dishes;
+            if (categoryId === 'popular') {
+                return menuCache.dishes.filter(d => (d.is_popular || d.isPopular) && d.is_available !== false);
             }
-            return menuCache.dishes;
+            if (categoryId === 'special') {
+                return menuCache.dishes.filter(d => (d.is_special || d.isSpecial) && d.is_available !== false);
+            }
+            const targetId = String(categoryId).toLowerCase();
+            const categories = menuCache.categories || [];
+            const targetCat = categories.find(c => String(c.id).toLowerCase() === targetId || String(c.name).toLowerCase() === targetId);
+            const catIdToMatch = targetCat ? String(targetCat.id).toLowerCase() : targetId;
+            const catNameToMatch = targetCat ? String(targetCat.name).toLowerCase() : targetId;
+
+            return menuCache.dishes.filter(d => {
+                const dCatId = String(d.category_id || d.categoryId || d.category || '').toLowerCase();
+                const dCatName = String(d.category_name || '').toLowerCase();
+                return dCatId === catIdToMatch || (dCatName && dCatName === catNameToMatch) || dCatId === targetId;
+            });
         }
         return null;
     },
@@ -292,7 +329,7 @@ export const apiService = {
         }
         const { data, error } = await supabase.from('categories').select('*').order('display_order', { ascending: true });
         if (error) throw error;
-        const categories = data || [];
+        const categories = sortCategoriesByPriority(data || []);
         menuCache.categories = categories;
         menuCache.categoriesTime = now;
         return categories;
@@ -300,20 +337,39 @@ export const apiService = {
 
     async getDishes(categoryId = null) {
         const now = Date.now();
-        if (!categoryId && menuCache.dishes && (now - menuCache.dishesTime < CACHE_TTL_MS)) {
-            return menuCache.dishes;
-        }
-        let query = supabase.from('dishes').select('*');
-        if (categoryId) query = query.eq('category_id', categoryId);
-        const { data, error } = await query;
-        if (error) throw error;
-        const dishes = data || [];
-        if (!categoryId) {
+        let dishes = [];
+        if (menuCache.dishes && (now - menuCache.dishesTime < CACHE_TTL_MS)) {
+            dishes = menuCache.dishes;
+        } else {
+            const { data, error } = await supabase.from('dishes').select('*');
+            if (error) throw error;
+            dishes = data || [];
             menuCache.dishes = dishes;
             menuCache.dishesTime = now;
             dishes.forEach(d => menuCache.dishMap.set(d.id, { data: d, timestamp: now }));
         }
-        return dishes;
+
+        if (!categoryId) return dishes;
+
+        if (categoryId === 'popular') {
+            return dishes.filter(d => (d.is_popular || d.isPopular) && d.is_available !== false);
+        }
+        if (categoryId === 'special') {
+            return dishes.filter(d => (d.is_special || d.isSpecial) && d.is_available !== false);
+        }
+
+        const targetId = String(categoryId).toLowerCase();
+        const categories = menuCache.categories || await this.getCategories();
+        const targetCat = categories.find(c => String(c.id).toLowerCase() === targetId || String(c.name).toLowerCase() === targetId);
+
+        const catIdToMatch = targetCat ? String(targetCat.id).toLowerCase() : targetId;
+        const catNameToMatch = targetCat ? String(targetCat.name).toLowerCase() : targetId;
+
+        return dishes.filter(d => {
+            const dCatId = String(d.category_id || d.categoryId || d.category || '').toLowerCase();
+            const dCatName = String(d.category_name || '').toLowerCase();
+            return dCatId === catIdToMatch || (dCatName && dCatName === catNameToMatch) || dCatId === targetId;
+        });
     },
 
     async getDishById(id) {
@@ -555,24 +611,29 @@ export const apiService = {
     async saveCategory(categoryPayload) {
         invalidateMenuCache();
 
+        let oldCategory = null;
         let oldImage = null;
         if (categoryPayload.id) {
             try {
-                const { data: oldCat } = await supabase.from('categories').select('image_url').eq('id', categoryPayload.id).maybeSingle();
+                const { data: oldCat } = await supabase.from('categories').select('*').eq('id', categoryPayload.id).maybeSingle();
+                oldCategory = oldCat;
                 oldImage = oldCat?.image_url || null;
             } catch (e) {
-                console.warn('Could not fetch existing category for image comparison:', e);
+                console.warn('Could not fetch existing category for comparison:', e);
             }
         }
 
         const rawImg = categoryPayload.image_url || categoryPayload.image || '';
         const processedImage = await processAndUploadImage(rawImg, 'categories');
 
+        const displayOrder = categoryPayload.display_order ?? oldCategory?.display_order ?? getCategoryPriority(categoryPayload.name);
+
         const supabasePayload = {
             id: categoryPayload.id || categoryPayload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString().slice(-4),
             name: categoryPayload.name,
             description: categoryPayload.description || '',
-            image_url: processedImage
+            image_url: processedImage,
+            display_order: displayOrder
         };
         const { data, error } = await supabase.from('categories').upsert([supabasePayload]).select().single();
         if (error) throw error;

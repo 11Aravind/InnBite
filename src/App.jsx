@@ -76,6 +76,7 @@ function App() {
                 <Route path="/qr/:qrCode" element={<QRHandler />} />
                 <Route path="/FoodDetails/:foodId" element={<FoodDetails />} />
                 <Route path="/CategoryDetails/:categoryId" element={<CategoryDetails />} />
+                <Route path="/category/:categoryId" element={<CategoryDetails />} />
                 <Route path="/cart" element={<Cart />} />
 
                 {/* Waiter Application Routes (Authenticated) */}

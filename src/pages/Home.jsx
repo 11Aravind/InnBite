@@ -7,6 +7,7 @@ import CategoryCard from '../components/CategoryCard';
 import BannerCarousel from '../components/BannerCarousel';
 import BottomNavigation from '../components/BottomNavigation';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
+import FloatingMenuButton from '../components/FloatingMenuButton';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { apiService } from '../utils/apiService';
@@ -91,6 +92,7 @@ export default function Home() {
             navigate('/admin/login');
         }
     };
+
     const [showAllCategories, setShowAllCategories] = useState(false);
 
     useEffect(() => {
@@ -115,14 +117,18 @@ export default function Home() {
     const [activeOrders, setActiveOrders] = useState([]);
     const [showOrderModal, setShowOrderModal] = useState(false);
 
-    // Table detection from QR Code URL (?table=X)
+    const session = getOrCreateCustomerSession();
+    const { settings } = useSettings();
+    const isSelfService = (settings?.service_mode || session.service_mode) === 'SELF_SERVICE';
+
+    // Table detection from QR Code URL (?table=X) or customer session
     const [tableNumber, setTableNumber] = useState(() => {
         const urlTable = searchParams.get('table');
         if (urlTable) {
             secureStorage.setItem('orderly_table_number', urlTable);
             return urlTable;
         }
-        return secureStorage.getItem('orderly_table_number') || '1';
+        return session.table_number || secureStorage.getItem('orderly_table_number') || '1';
     });
 
     // API Data state
@@ -280,10 +286,37 @@ export default function Home() {
         })
         : [];
 
+    const handleSelectFloatingCategory = (type, item) => {
+        if (type === 'popular') {
+            navigate('/CategoryDetails/popular');
+        } else if (type === 'special') {
+            navigate('/CategoryDetails/special');
+        } else if (type === 'category' && item?.id) {
+            navigate(`/CategoryDetails/${item.id}`);
+        }
+    };
+
     const banners = homeData?.banners || [];
     const popularDishes = homeData?.popular_dishes || [];
     const todaysSpecials = homeData?.todays_specials || [];
     const categories = homeData?.categories || [];
+
+    // Animated dynamic placeholder categories rotation
+    const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+    const suggestionCategories = (categories && categories.length > 0)
+        ? categories.map(c => c.name)
+        : ['Pizza', 'Biryani', 'Burgers', 'Chinese', 'Desserts', 'Beverages', 'Starters', 'Combos'];
+
+    useEffect(() => {
+        if (suggestionCategories.length === 0) return;
+        const interval = setInterval(() => {
+            setPlaceholderIndex((prev) => (prev + 1) % suggestionCategories.length);
+        }, 2200);
+        return () => clearInterval(interval);
+    }, [suggestionCategories.length]);
+
+    const animatedCategoryName = suggestionCategories[placeholderIndex % suggestionCategories.length] || 'Pizza';
 
     return (
         <div
@@ -322,12 +355,24 @@ export default function Home() {
                                 )}
                             </div>
 
-                            {/* Brand Name Title & Tagline Subtitle */}
+                            {/* Brand Name Title & Table Badge */}
                             <div className="flex flex-col min-w-0 justify-center">
-                                <h1 className="text-white text-xl sm:text-2xl font-black tracking-tight leading-none flex items-center">
-                                    <span>Inn</span>
-                                    <span className="text-[#f59e0b] ml-0.5">Bite</span>
-                                </h1>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h1 className="text-white text-xl sm:text-2xl font-black tracking-tight leading-none flex items-center">
+                                        <span>{appName ? appName.slice(0, 3) : 'Inn'}</span>
+                                        <span className="text-[#f59e0b] ml-0.5">{appName ? appName.slice(3) : 'Bite'}</span>
+                                    </h1>
+                                    {isSelfService ? (
+                                        <span className="text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-xs">
+                                            <span>🛎️</span> Self-Service
+                                        </span>
+                                    ) : (
+                                        <span className="text-[11px] font-black bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs shadow-2xs">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                                            <span>Table #{tableNumber}</span>
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-white/75 text-[11px] sm:text-xs font-medium tracking-tight leading-tight mt-0.5 truncate">
                                     Good Food · Happy Moments
                                 </p>
@@ -350,17 +395,33 @@ export default function Home() {
                     <div className="relative flex items-center w-full h-12 rounded-full bg-white shadow-xl border border-white/40 px-4 mt-3.5 transition-all focus-within:ring-2 focus-within:ring-emerald-400 group">
                         <Search className="w-5 h-5 text-slate-400 shrink-0 group-focus-within:text-[#114536] transition-colors" />
 
-                        <input
-                            placeholder="Search for 'Pizza' or any dish..."
-                            className="h-full w-full bg-transparent pl-3 pr-2 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none"
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                        />
+                        <div className="relative flex-1 h-full flex items-center min-w-0">
+                            <input
+                                id="home-search-input"
+                                type="text"
+                                className="h-full w-full bg-transparent pl-3 pr-2 text-sm font-medium text-slate-800 focus:outline-none z-10 relative"
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                            />
+
+                            {!searchQuery && (
+                                <div className="absolute left-3 inset-y-0 flex items-center pointer-events-none text-sm font-medium text-slate-400 select-none overflow-hidden pr-2">
+                                    <span className="whitespace-nowrap">Search for '</span>
+                                    <span
+                                        key={placeholderIndex}
+                                        className="inline-block animate-placeholder-slide transition-all px-0.5 truncate max-w-[120px] sm:max-w-[200px]"
+                                    >
+                                        {animatedCategoryName}
+                                    </span>
+                                    <span className="whitespace-nowrap">'</span>
+                                </div>
+                            )}
+                        </div>
 
                         {searchQuery && (
                             <button
                                 type="button"
-                                className="p-1 text-slate-400 hover:text-slate-700 transition-colors rounded-full hover:bg-slate-100 mr-1 cursor-pointer"
+                                className="p-1 text-slate-400 hover:text-slate-700 transition-colors rounded-full hover:bg-slate-100 mr-1 cursor-pointer z-20"
                                 onClick={() => setSearchQuery('')}
                                 title="Clear search"
                             >
@@ -428,7 +489,7 @@ export default function Home() {
                     </div>
                 )}
 
-                
+
 
                 {/* Main Content or Search Results */}
                 {searchQuery.trim().length > 0 ? (
@@ -577,9 +638,15 @@ export default function Home() {
                         </div>
                     </>
                 )}
+                {/* Generous bottom spacing so all content scrolls cleanly above fixed BottomNavigation */}
+                <div className="h-28 sm:h-32" />
             </div>
+            <FloatingMenuButton
+                categories={categories}
+                allDishes={allDishes}
+                onSelectCategory={handleSelectFloatingCategory}
+            />
             <BottomNavigation />
-            <div className="pb-[72px]" />
         </div>
     );
-}
+}

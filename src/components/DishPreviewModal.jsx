@@ -198,25 +198,17 @@ export default function DishPreviewModal({
                     <div className="flex items-center gap-3">
                         {/* Quantity Stepper / ADD Button */}
                         {quantity > 0 ? (
-                            <div className="flex-1 h-12 bg-[#114536] text-white rounded-2xl flex items-center justify-between px-4 shadow-md">
-                                <button
-                                    type="button"
-                                    onClick={handleDecrease}
-                                    className="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center font-bold active:scale-90 transition-all"
-                                >
-                                    <Minus className="w-4 h-4 text-white" />
-                                </button>
-                                <span className="font-extrabold text-sm select-none">
-                                    {quantity} in Cart
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={handleAddToCart}
-                                    className="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center font-bold active:scale-90 transition-all"
-                                >
-                                    <Plus className="w-4 h-4 text-white" />
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose();
+                                    navigate('/cart');
+                                }}
+                                className="flex-1 h-12 bg-[#114536] hover:bg-[#0c382b] text-white font-extrabold text-sm rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                            >
+                                <span>Go to Cart</span>
+                                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                            </button>
                         ) : (
                             <button
                                 type="button"

@@ -178,3 +178,18 @@ body, button, input, select, textarea {
         font-weight: 700;
     }
 }
+
+@keyframes placeholderSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-placeholder-slide {
+    animation: placeholderSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
