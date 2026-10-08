@@ -4,6 +4,7 @@ import { useCart } from 'react-use-cart';
 import ImageWithSkeleton from './ImageWithSkeleton';
 import VegNonVegSymbol from './VegNonVegSymbol';
 import DishPreviewModal from './DishPreviewModal';
+import QuantityControl from './QuantityControl';
 import { showAddToCartToast } from '../utils/toastUtils';
 import { Plus, Minus } from 'lucide-react';
 
@@ -157,29 +158,13 @@ export default function FoodCard({
                     {/* Overlaid ADD Button / Quantity Control Pill */}
                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10">
                         {quantity > 0 ? (
-                            <div
-                                className="bg-white border border-slate-200/90 rounded-xl px-2 py-1 flex items-center gap-2 shadow-md text-[#114536]"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={handleDecrease}
-                                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-90 transition-all flex items-center justify-center font-bold text-slate-800"
-                                >
-                                    <Minus className="w-3 h-3" />
-                                </button>
-
-                                <span className="text-xs font-extrabold text-[#114536] w-4 text-center select-none">
-                                    {quantity}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    onClick={handleIncrease}
-                                    className="w-6 h-6 rounded-lg bg-[#114536] text-white hover:bg-[#0c382b] active:scale-95 transition-all flex items-center justify-center font-bold shadow-xs"
-                                >
-                                    <Plus className="w-3 h-3 text-white" />
-                                </button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <QuantityControl
+                                    quantity={quantity}
+                                    onIncrease={handleIncrease}
+                                    onDecrease={handleDecrease}
+                                    disabled={!isAvailable}
+                                />
                             </div>
                         ) : (
                             <button

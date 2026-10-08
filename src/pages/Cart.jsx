@@ -8,6 +8,7 @@ import { openRazorpayCheckout } from '../utils/razorpay';
 import CustomerOrderDetailsModal from '../components/CustomerOrderDetailsModal';
 import { CreditCard, AlertCircle, Store, CheckCircle2 } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
+import { addActiveOrderToStorage } from '../utils/orderUtils';
 import { useSettings } from '../context/SettingsContext';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { toast } from 'react-hot-toast';
@@ -18,6 +19,7 @@ export default function Cart() {
     const {
         items,
         updateItemQuantity,
+        updateItem,
         removeItem,
         cartTotal,
         emptyCart,
@@ -118,7 +120,7 @@ export default function Cart() {
     const handleSaveOrderState = (orderData) => {
         setOrderPlaced(orderData);
         try {
-            secureStorage.setItem('orderly_active_order', orderData);
+            addActiveOrderToStorage(orderData);
         } catch (e) {
             console.error('Error saving active order:', e);
         }
@@ -292,17 +294,20 @@ export default function Cart() {
                                     Table #{tableNumber}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                                <label className="text-xs text-[#836c67] font-bold">No:</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="99"
-                                    value={tableNumber}
-                                    onChange={handleTableChange}
-                                    className="w-10 text-center text-xs font-extrabold outline-none bg-transparent text-[#171312] p-0 border-none focus:ring-0"
-                                />
-                            </div>
+                            <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                QR Verified
+                            </span>
+
+
+
+
+
+
+
+
+
+
                         </div>
                     )}
                 </div>
@@ -344,6 +349,7 @@ export default function Cart() {
                                     onIncrease={() => updateItemQuantity(item.id, item.quantity + 1)}
                                     onDecrease={() => updateItemQuantity(item.id, item.quantity - 1)}
                                     onRemove={() => removeItem(item.id)}
+                                    onUpdateNotes={(newNote) => updateItem(item.id, { ...item, special_instruction: newNote, specialInstruction: newNote })}
                                 />
                             );
                         })}
