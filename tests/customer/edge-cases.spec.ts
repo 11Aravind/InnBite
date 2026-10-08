@@ -95,10 +95,10 @@ test.describe('Multi-Customer & Table QR Concurrency Tests', () => {
     const page3 = await ctx3.newPage();
     await page3.goto('/table/3');
 
-    // Verify pages loaded with respective URLs/sessions
-    await expect(page1).toHaveURL(/.*table\/1/);
-    await expect(page2).toHaveURL(/.*table\/2/);
-    await expect(page3).toHaveURL(/.*table\/3/);
+    // Verify pages loaded menu after table QR scan validation
+    await expect(page1).toHaveURL(/\/$/);
+    await expect(page2).toHaveURL(/\/$/);
+    await expect(page3).toHaveURL(/\/$/);
 
     await ctx1.close();
     await ctx2.close();
