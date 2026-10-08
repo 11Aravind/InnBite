@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../../utils/apiService';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 import { playOrderChimeSound } from '../../utils/sound';
+import { sendSystemNotification, requestNotificationPermission, getNotificationPermissionStatus } from '../../utils/notifications';
 import { useSettings } from '../../context/SettingsContext';
 import { printThermalReceipt } from '../../utils/printReceipt';
 import AdminSkeletonTable from '../../components/AdminSkeletonTable';
-import { Receipt, RefreshCw, CreditCard, Volume2, VolumeX, MessageSquare, Printer } from 'lucide-react';
+import { Receipt, RefreshCw, CreditCard, Volume2, VolumeX, MessageSquare, Printer, Bell, BellOff } from 'lucide-react';
 
 const formatDateTime = (dateStr) => {
     if (!dateStr) return '';
@@ -24,6 +25,7 @@ export default function AdminOrders() {
     const [loading, setLoading] = useState(true);
     const [filterPayment, setFilterPayment] = useState('all');
     const [soundEnabled, setSoundEnabled] = useState(true);
+    const [notifPermission, setNotifPermission] = useState(getNotificationPermissionStatus());
 
     const previousOrderIdsRef = useRef(new Set());
     const isFirstLoadRef = useRef(true);
@@ -35,7 +37,15 @@ export default function AdminOrders() {
 
         const newOrders = freshOrders.filter(o => !previousOrderIdsRef.current.has(o.id));
         if (!isFirstLoadRef.current && newOrders.length > 0 && soundEnabled) {
-            playOrderChimeSound();
+            const newest = newOrders[0];
+            sendSystemNotification({
+                title: newest.service_mode === 'SELF_SERVICE' || (!newest.table_number && !newest.table_id)
+                    ? `🆕 Self-Service Order #${newest.order_number || newest.id}`
+                    : `🔔 New Order - Table #${newest.table_number}`,
+                body: `Order #${newest.order_number || newest.id} · Total: ₹${Number(newest.total_amount || 0).toFixed(2)} · ${newest.customer_name || 'Guest'}`,
+                url: '/admin/orders',
+                playSound: soundEnabled
+            });
         }
 
         previousOrderIdsRef.current = new Set(freshOrders.map(o => o.id));
@@ -53,6 +63,20 @@ export default function AdminOrders() {
         if (isSupabaseConfigured && supabase) {
             subscription = supabase
                 .channel('admin_orders_realtime')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+                    if (payload.new) {
+                        const newest = payload.new;
+                        sendSystemNotification({
+                            title: newest.service_mode === 'SELF_SERVICE' || (!newest.table_number && !newest.table_id)
+                                ? `🆕 Self-Service Order #${newest.order_number || newest.id}`
+                                : `🔔 New Order - Table #${newest.table_number}`,
+                            body: `Order #${newest.order_number || newest.id} · Total: ₹${Number(newest.total_amount || 0).toFixed(2)} · ${newest.customer_name || 'Guest'}`,
+                            url: '/admin/orders',
+                            playSound: soundEnabled
+                        });
+                    }
+                    loadOrders();
+                })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
                     loadOrders();
                 })
@@ -64,6 +88,11 @@ export default function AdminOrders() {
             if (subscription) supabase.removeChannel(subscription);
         };
     }, [soundEnabled]);
+
+    const handleToggleNotification = async () => {
+        const perm = await requestNotificationPermission();
+        setNotifPermission(perm);
+    };
 
     const handleMarkPaid = async (orderId) => {
         await apiService.updatePaymentStatus(orderId, 'SUCCESS');
@@ -96,6 +125,19 @@ export default function AdminOrders() {
                     >
                         {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
                         <span>{soundEnabled ? 'Sound ON' : 'Muted'}</span>
+                    </button>
+
+                    <button
+                        onClick={handleToggleNotification}
+                        className={`px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
+                            notifPermission === 'granted'
+                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold'
+                                : 'bg-amber-500 text-white shadow-sm'
+                        }`}
+                        title={notifPermission === 'granted' ? 'Lock Screen Alerts Active' : 'Click to Enable Lock Screen & Sound Alerts'}
+                    >
+                        {notifPermission === 'granted' ? <Bell className="w-3.5 h-3.5 text-emerald-700" /> : <BellOff className="w-3.5 h-3.5" />}
+                        <span>{notifPermission === 'granted' ? 'Lock Screen Alerts Active' : 'Enable Lock Screen Alerts'}</span>
                     </button>
 
                     <div className="flex bg-white p-1 rounded-xl border border-slate-200 text-xs">

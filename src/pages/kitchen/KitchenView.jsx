@@ -4,6 +4,7 @@ import { apiService } from '../../utils/apiService';
 import { useAuth } from '../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 import { playOrderChimeSound } from '../../utils/sound';
+import { sendSystemNotification, requestNotificationPermission, getNotificationPermissionStatus } from '../../utils/notifications';
 import {
     ChefHat,
     RefreshCw,
@@ -13,6 +14,7 @@ import {
     CreditCard,
     Clock,
     Bell,
+    BellOff,
     Flame,
     Volume2,
     VolumeX,
@@ -33,6 +35,7 @@ export default function KitchenView() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [activeNotification, setActiveNotification] = useState(null);
+    const [notifPermission, setNotifPermission] = useState(getNotificationPermissionStatus());
 
     const previousOrderIdsRef = useRef(new Set());
     const isFirstLoadRef = useRef(true);
@@ -49,7 +52,14 @@ export default function KitchenView() {
             const newest = newOrders[0];
             setActiveNotification(newest);
             if (soundEnabled) {
-                playOrderChimeSound();
+                sendSystemNotification({
+                    title: newest.service_mode === 'SELF_SERVICE' || (!newest.table_number && !newest.table_id)
+                        ? `🆕 Self-Service Order #${newest.order_number || newest.id}`
+                        : `🔔 New Order - Table #${newest.table_number}`,
+                    body: `Order #${newest.order_number || newest.id} · Total: ₹${Number(newest.total_amount || 0).toFixed(2)} · ${newest.customer_name || 'Guest'}`,
+                    url: '/kitchen',
+                    playSound: soundEnabled
+                });
             }
         }
 
@@ -73,7 +83,16 @@ export default function KitchenView() {
                 .channel('kitchen_orders')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
                     if (soundEnabled) {
-                        playOrderChimeSound();
+                        if (payload.new) {
+                            sendSystemNotification({
+                                title: payload.new.service_mode === 'SELF_SERVICE' || (!payload.new.table_number && !payload.new.table_id)
+                                    ? `🆕 Self-Service Order #${payload.new.order_number || payload.new.id}`
+                                    : `🔔 New Order - Table #${payload.new.table_number}`,
+                                body: `Order #${payload.new.order_number || payload.new.id} · Total: ₹${Number(payload.new.total_amount || 0).toFixed(2)} · ${payload.new.customer_name || 'Guest'}`,
+                                url: '/kitchen',
+                                playSound: soundEnabled
+                            });
+                        }
                     }
                     if (payload.new) {
                         setActiveNotification(payload.new);
@@ -94,6 +113,11 @@ export default function KitchenView() {
 
     const handleTestSound = () => {
         playOrderChimeSound();
+    };
+
+    const handleToggleNotifPermission = async () => {
+        const status = await requestNotificationPermission();
+        setNotifPermission(status);
     };
 
     const handleStatusUpdate = async (orderId, newStatus) => {
@@ -208,6 +232,19 @@ export default function KitchenView() {
                         className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl transition-colors border border-white/20 flex items-center gap-1"
                     >
                         <Bell className="w-3.5 h-3.5 text-amber-300" /> Test Sound
+                    </button>
+
+                    <button
+                        onClick={handleToggleNotifPermission}
+                        className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
+                            notifPermission === 'granted'
+                                ? 'bg-emerald-500 text-white shadow-sm border border-emerald-400'
+                                : 'bg-amber-500 text-white shadow-sm'
+                        }`}
+                        title={notifPermission === 'granted' ? 'Lock Screen Notifications Active' : 'Click to enable Lock Screen & Vibration Alerts'}
+                    >
+                        {notifPermission === 'granted' ? <Bell className="w-4 h-4 text-white" /> : <BellOff className="w-4 h-4 text-white" />}
+                        <span>{notifPermission === 'granted' ? 'Lock Screen Alerts Active' : 'Enable Lock Screen Alerts'}</span>
                     </button>
 
                     <button
