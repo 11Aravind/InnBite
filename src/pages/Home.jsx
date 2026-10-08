@@ -16,7 +16,8 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { Utensils, ChevronRight, Clock, Search, X, XCircle, Navigation, ChevronDown, User, Mic, Phone } from 'lucide-react';
-import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
+import { handleOrderRealtimeUpdate, syncActiveOrdersWithServer, getActiveOrdersFromStorage } from '../utils/orderUtils';
+import { getOrCreateCustomerSession } from '../utils/session';
 
 export default function Home() {
     const handleCall = () => {
@@ -111,7 +112,7 @@ export default function Home() {
     }, []);
 
     // Active order modal state
-    const [activeOrder, setActiveOrder] = useState(null);
+    const [activeOrders, setActiveOrders] = useState([]);
     const [showOrderModal, setShowOrderModal] = useState(false);
 
     // Table detection from QR Code URL (?table=X)
@@ -129,56 +130,72 @@ export default function Home() {
     const [allDishes, setAllDishes] = useState([]);
     const [apiLoading, setApiLoading] = useState(true);
 
-    const validateActiveOrder = async (orderToCheck) => {
-        if (!orderToCheck || !orderToCheck.id) return;
-        const updated = await syncActiveOrderWithServer(orderToCheck);
-        if (!updated) {
-            setActiveOrder(null);
-        } else {
-            setActiveOrder(updated);
+    const loadAndSyncActiveOrders = async () => {
+        try {
+            const session = getOrCreateCustomerSession();
+            const urlTable = searchParams.get('table');
+            const currentTable = urlTable || secureStorage.getItem('orderly_table_number');
+            const activeList = await syncActiveOrdersWithServer({
+                sessionId: session?.session_id,
+                tableNumber: currentTable
+            });
+            setActiveOrders(activeList || []);
+        } catch (e) {
+            console.error('Error syncing active orders in Home:', e);
         }
+
+
+
+
+
+
     };
 
     useEffect(() => {
-        const storedOrder = secureStorage.getItem('orderly_active_order');
-        if (storedOrder) {
-            try {
-                if (storedOrder && storedOrder.id) {
-                    validateActiveOrder(storedOrder);
-                }
-            } catch (e) {
-                console.error('Error parsing stored active order:', e);
-            }
-        }
-    }, []);
+        loadAndSyncActiveOrders();
 
-    useEffect(() => {
+        const interval = setInterval(() => {
+            loadAndSyncActiveOrders();
+        }, 4000);
+
+
+
+
+
+
+
+
+
+
         let subscription;
-        if (isSupabaseConfigured && supabase && activeOrder?.id) {
+        if (isSupabaseConfigured && supabase) {
             subscription = supabase
-                .channel(`home_order_track_${activeOrder.id}`)
+                .channel('home_orders_realtime_track')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                    if (payload.eventType === 'DELETE' && (payload.old?.id === activeOrder.id)) {
-                        secureStorage.removeItem('orderly_active_order');
-                        setActiveOrder(null);
-                        setShowOrderModal(false);
-                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === activeOrder.id) {
-                        const updated = handleOrderRealtimeUpdate(activeOrder, payload.new);
-                        if (!updated) {
-                            setActiveOrder(null);
-                            setShowOrderModal(false);
-                        } else {
-                            setActiveOrder(updated);
-                        }
+                    if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+                        loadAndSyncActiveOrders();
                     }
+
+
+
+
+
+
+
+
+
+
+
+
                 })
                 .subscribe();
         }
 
         return () => {
+            clearInterval(interval);
             if (subscription) supabase.removeChannel(subscription);
         };
-    }, [activeOrder?.id]);
+    }, [searchParams]);
 
     useEffect(() => {
         const tableFromUrl = searchParams.get('table');
@@ -274,9 +291,9 @@ export default function Home() {
             style={{ fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif' }}
         >
             {/* Customer Order Details Modal */}
-            {showOrderModal && activeOrder && (
+            {showOrderModal && activeOrders && activeOrders.length > 0 && (
                 <CustomerOrderDetailsModal
-                    order={activeOrder}
+                    orders={activeOrders}
                     onClose={() => setShowOrderModal(false)}
                     onOrderMore={() => setShowOrderModal(false)}
                     disableSubscription={true}
@@ -380,7 +397,7 @@ export default function Home() {
                 )}
 
                 {/* Active Order Banner for Customer (Yellow/Gold Modal Theme) */}
-                {activeOrder && (
+                {activeOrders && activeOrders.length > 0 && (
                     <div className="px-4 pt-2">
                         <div
                             onClick={() => setShowOrderModal(true)}
@@ -392,13 +409,17 @@ export default function Home() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-black text-white">Active Table #{activeOrder.table_number} Order</span>
+                                        <span className="text-xs font-black text-white">
+                                            {activeOrders.length > 1
+                                                ? `Table #${activeOrders[0]?.table_number || tableNumber} Active Orders (${activeOrders.length} Sub-Orders)`
+                                                : `Active Table #${activeOrders[0]?.table_number || tableNumber} Order`}
+                                        </span>
                                         <span className="text-[10px] uppercase font-extrabold bg-[#1a1815] text-[#f5d796] border border-[#3b3226] px-2 py-0.5 rounded-full">
-                                            {activeOrder.status}
+                                            {activeOrders.some(o => o.status === 'READY') ? 'READY FOR PICKUP' : activeOrders.some(o => o.status === 'PREPARING' || o.status === 'ACCEPTED') ? 'PREPARING' : 'CONFIRMED'}
                                         </span>
                                     </div>
                                     <span className="text-[11px] text-amber-100 font-semibold block mt-0.5">
-                                        Total: ₹{Number(activeOrder.total_amount).toFixed(2)} · Tap for details & live tracking
+                                        Combined Total: ₹{activeOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0).toFixed(2)} · {activeOrders.reduce((sum, o) => sum + (o.order_items || o.items || []).length, 0)} items · Tap for live breakdown
                                     </span>
                                 </div>
                             </div>

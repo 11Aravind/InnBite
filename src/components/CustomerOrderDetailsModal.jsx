@@ -1,57 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
-import { ChefHat, Check, CreditCard, X, RefreshCw, MessageSquare } from 'lucide-react';
+import { ChefHat, Check, CreditCard, X, RefreshCw, MessageSquare, Utensils, Clock, Layers } from 'lucide-react';
 import { secureStorage } from '../utils/secureStorage';
-import { handleOrderRealtimeUpdate, syncActiveOrderWithServer } from '../utils/orderUtils';
+import { handleOrderRealtimeUpdate, syncActiveOrdersWithServer, getActiveOrdersFromStorage } from '../utils/orderUtils';
 
-export default function CustomerOrderDetailsModal({ order: initialOrder, onClose, onOrderMore, disableSubscription = false }) {
-    const [order, setOrder] = useState(initialOrder);
+export default function CustomerOrderDetailsModal({
+    order: initialSingleOrder,
+    orders: initialOrdersProp,
+    onClose,
+    onOrderMore,
+    disableSubscription = false
+}) {
+    const [orders, setOrders] = useState(() => {
+        if (Array.isArray(initialOrdersProp) && initialOrdersProp.length > 0) return initialOrdersProp;
+        if (initialSingleOrder) return [initialSingleOrder];
+        return getActiveOrdersFromStorage();
+    });
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        if (disableSubscription) {
-            setOrder(initialOrder);
+        if (Array.isArray(initialOrdersProp) && initialOrdersProp.length > 0) {
+            setOrders(initialOrdersProp);
+        } else if (initialSingleOrder) {
+            setOrders([initialSingleOrder]);
         }
-    }, [initialOrder, disableSubscription]);
+    }, [initialSingleOrder, initialOrdersProp]);
 
-    const refreshOrderStatus = async () => {
-        if (!order?.id) return;
+    const refreshActiveOrders = async () => {
         setIsRefreshing(true);
-        const updated = await syncActiveOrderWithServer(order);
-        if (!updated) {
+        const activeList = await syncActiveOrdersWithServer({ knownOrders: orders });
+        if (!activeList || activeList.length === 0) {
             onClose();
         } else {
-            setOrder(updated);
+            setOrders(activeList);
         }
         setIsRefreshing(false);
     };
 
     useEffect(() => {
         if (!disableSubscription) {
-            refreshOrderStatus();
+            refreshActiveOrders();
         }
 
         const interval = setInterval(() => {
             if (!disableSubscription) {
-                refreshOrderStatus();
+                refreshActiveOrders();
             }
         }, 3000);
 
         let subscription;
-        if (!disableSubscription && isSupabaseConfigured && supabase && order?.id) {
+        if (!disableSubscription && isSupabaseConfigured && supabase) {
             subscription = supabase
-                .channel(`order_track_${order.id}`)
+                .channel('modal_orders_track')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                    if (payload.eventType === 'DELETE' && (payload.old?.id === order.id)) {
-                        secureStorage.removeItem('orderly_active_order');
-                        onClose();
-                    } else if (payload.eventType === 'UPDATE' && payload.new?.id === order.id) {
-                        const updated = handleOrderRealtimeUpdate(order, payload.new);
-                        if (!updated) {
-                            onClose();
-                        } else {
-                            setOrder(updated);
-                        }
+                    if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+                        setOrders(prevOrders => {
+                            const updated = handleOrderRealtimeUpdate(prevOrders, payload.new || payload.old);
+                            if (!updated || updated.length === 0) {
+                                onClose();
+                                return [];
+                            }
+                            return updated;
+                        });
                     }
                 })
                 .subscribe();
@@ -61,16 +71,26 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
             clearInterval(interval);
             if (subscription) supabase.removeChannel(subscription);
         };
-    }, [order?.id, disableSubscription, onClose]);
+    }, [disableSubscription, onClose]);
 
-    if (!order) return null;
+    if (!orders || orders.length === 0) return null;
 
-    const items = order.order_items || order.items || [];
-    const isPaid = order.payment_status === 'SUCCESS' || order.payment_status === 'paid';
-    const isSelfService = order.service_mode === 'SELF_SERVICE' || (!order.table_number && !order.table_id);
+    const firstOrder = orders[0];
+    const isSelfService = orders.every(o => o.service_mode === 'SELF_SERVICE' || (!o.table_number && !o.table_id));
+    const tableNumber = orders.find(o => o.table_number)?.table_number || secureStorage.getItem('orderly_table_number') || '1';
+
+    // Calculate combined total & overall status step
+    const grandTotal = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+    const orderNumbersString = orders.map(o => `#${o.order_number || o.id}`).join(', ');
 
     const statusMap = { CONFIRMED: 1, ACCEPTED: 2, PREPARING: 2, READY: 3, SERVED: 3, pending: 1, preparing: 2, completed: 3 };
-    const currentStep = statusMap[order.status] || 1;
+    const maxStep = Math.max(...orders.map(o => statusMap[o.status] || 1));
+
+    const overallStatusLabel = orders.some(o => o.status === 'READY')
+        ? 'READY FOR PICKUP / SERVING'
+        : orders.some(o => o.status === 'PREPARING' || o.status === 'ACCEPTED')
+            ? 'PREPARING IN KITCHEN'
+            : 'CONFIRMED';
 
     const formatTime = (isoString) => {
         if (!isoString) return '—';
@@ -93,17 +113,17 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                         </div>
                         <div>
                             <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                                Order Confirmed
+                                {orders.length > 1 ? `${orders.length} Active Orders` : 'Order Confirmed'}
                             </span>
                             <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight mt-0.5">
-                                Order #{order.order_number || order.id}
+                                {orders.length > 1 ? `Orders ${orderNumbersString}` : `Order ${orderNumbersString}`}
                             </h2>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={refreshOrderStatus}
+                            onClick={refreshActiveOrders}
                             className={`p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all ${isRefreshing ? 'animate-spin' : ''}`}
                             title="Refresh order status"
                         >
@@ -121,42 +141,42 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                 {/* Body Content */}
                 <div className="p-6 space-y-5 overflow-y-auto max-h-[75vh] bg-white">
 
-                    {/* Service Mode Callout Banner */}
+                    {/* Service Mode Banner */}
                     {isSelfService ? (
                         <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-center space-y-1">
                             <span className="text-xs font-bold uppercase tracking-wider text-amber-900 block">
-                                Self-Service Pickup Order
+                                Self-Service Pickup Orders
                             </span>
                             <p className="text-sm font-black text-amber-800">
-                                Please keep your order number <span className="underline">#{order.order_number || order.id}</span> to collect food.
+                                Order Numbers: <span className="underline">{orderNumbersString}</span>
                             </p>
                             <p className="text-[11px] text-amber-700 font-semibold">
-                                (No table assigned for self-service mode)
+                                (Keep your order numbers handy when collecting food)
                             </p>
                         </div>
                     ) : (
                         <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-md flex items-center justify-between">
                             <div>
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                                    Table Service Order
+                                    Table Service Active Orders
                                 </span>
                                 <span className="text-lg font-black text-white">
-                                    Table #{order.table_number}
+                                    Table #{tableNumber}
                                 </span>
                             </div>
                             <span className="text-xs font-extrabold bg-slate-800 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700">
-                                Table QR Identified
+                                {orders.length} Sub-Order{orders.length > 1 ? 's' : ''} Active
                             </span>
                         </div>
                     )}
 
-                    {/* Live Status Timeline Card */}
+                    {/* Overall Progress Stepper */}
                     <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-4">
                         <div className="flex justify-between items-center text-sm font-extrabold text-slate-900">
-                            <span>Order Progress</span>
+                            <span>Overall Progress</span>
                             <span className="capitalize px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
                                 <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-                                {order.status || 'CONFIRMED'}
+                                {overallStatusLabel}
                             </span>
                         </div>
 
@@ -164,11 +184,11 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                         <div className="relative pt-2 pb-1">
                             <div className="grid grid-cols-3 gap-2 relative z-10">
                                 {[
-                                    { step: 1, label: 'Confirmed', icon: Check, time: formatTime(order.created_at) },
-                                    { step: 2, label: 'Preparing', icon: ChefHat, time: currentStep >= 2 ? 'In Kitchen' : '—' },
-                                    { step: 3, label: 'Ready/Served', icon: Check, time: currentStep >= 3 ? 'Ready' : '—' }
+                                    { step: 1, label: 'Confirmed', icon: Check, time: formatTime(firstOrder?.created_at) },
+                                    { step: 2, label: 'Preparing', icon: ChefHat, time: maxStep >= 2 ? 'In Kitchen' : '—' },
+                                    { step: 3, label: 'Ready/Served', icon: Check, time: maxStep >= 3 ? 'Ready' : '—' }
                                 ].map((st) => {
-                                    const isActive = currentStep >= st.step;
+                                    const isActive = maxStep >= st.step;
                                     const IconComp = st.icon;
 
                                     return (
@@ -192,90 +212,122 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
                         </div>
                     </div>
 
-                    {/* Payment Details Card */}
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-emerald-600" />
-                            <span className="font-extrabold text-slate-900">
-                                {isPaid ? 'Payment Verified (SUCCESS)' : 'Payment Pending'}
-                            </span>
+                    {/* Breakdown of Sub-Orders */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                <Layers className="w-4 h-4 text-slate-400" />
+                                All Ordered Items ({orders.reduce((acc, o) => acc + (o.order_items || o.items || []).length, 0)} Items)
+                            </h4>
+                            {orders.length > 1 && (
+                                <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                    {orders.length} Sub-Orders Combined
+                                </span>
+                            )}
                         </div>
-                        {order.razorpay_payment_id && (
-                            <span className="font-mono text-[10px] font-bold text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
-                                ID: {order.razorpay_payment_id}
-                            </span>
-                        )}
-                    </div>
 
-                    {/* Items Breakdown */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Ordered Items & Customizations ({items.length})
-                        </h4>
+                        {orders.map((subOrder, subIdx) => {
+                            const items = subOrder.order_items || subOrder.items || [];
+                            const isPaid = subOrder.payment_status === 'SUCCESS' || subOrder.payment_status === 'paid';
 
-                        <div className="space-y-2.5">
-                            {items.map((item, idx) => {
-                                const customEntries = Object.entries(item.customizations || {});
-                                const instruction = item.special_instruction || item.specialInstruction;
-
-                                return (
-                                    <div
-                                        key={idx}
-                                        className="bg-white border border-slate-200/80 rounded-2xl p-3.5 flex flex-col gap-2 shadow-2xs"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-black text-slate-900 text-sm">
-                                                    {item.dish_name || item.name}
-                                                </span>
-                                                {item.portion_label && (
-                                                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                                        {item.portion_label}
-                                                    </span>
-                                                )}
-                                                <span className="text-xs font-extrabold text-slate-900">
-                                                    × {item.quantity}
-                                                </span>
-                                            </div>
-                                            <span className="font-black text-slate-900 text-sm">
-                                                ₹{(Number(item.unit_price_snapshot || item.unit_price || item.price || 0) * item.quantity).toFixed(2)}
+                            return (
+                                <div key={subOrder.id || subIdx} className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-2xs">
+                                    {/* Order Ticket Header */}
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                                                Order #{subOrder.order_number || subOrder.id}
+                                            </span>
+                                            <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                                                <Clock className="w-3 h-3 text-slate-400" />
+                                                {formatTime(subOrder.created_at)}
                                             </span>
                                         </div>
-
-                                        {/* Customizations tags */}
-                                        {customEntries.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                                {customEntries.map(([k, v]) => (
-                                                    <span key={k} className="text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
-                                                        • {v === 'No' ? `No ${k}` : `${k}: ${v}`}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Special Instruction */}
-                                        {instruction && (
-                                            <p className="text-[11px] text-indigo-700 italic bg-indigo-50 px-2 py-1 rounded border border-indigo-100 flex items-center gap-1">
-                                                <MessageSquare className="w-3 h-3 text-indigo-500 shrink-0" />
-                                                <span>Note: "{instruction}"</span>
-                                            </p>
-                                        )}
+                                        <span className="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">
+                                            {subOrder.status || 'CONFIRMED'}
+                                        </span>
                                     </div>
-                                );
-                            })}
-                        </div>
+
+                                    {/* Items in this Order */}
+                                    <div className="space-y-2">
+                                        {items.map((item, idx) => {
+                                            const customEntries = Object.entries(item.customizations || {});
+                                            const instruction = item.special_instruction || item.specialInstruction;
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className="bg-white border border-slate-200/80 rounded-xl p-3 flex flex-col gap-1.5 shadow-2xs"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-slate-900 text-sm">
+                                                                {item.dish_name || item.name}
+                                                            </span>
+                                                            {item.portion_label && (
+                                                                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                                                    {item.portion_label}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs font-extrabold text-slate-900">
+                                                                × {item.quantity}
+                                                            </span>
+                                                        </div>
+                                                        <span className="font-black text-slate-900 text-sm">
+                                                            ₹{(Number(item.unit_price_snapshot || item.unit_price || item.price || 0) * item.quantity).toFixed(2)}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Customizations */}
+                                                    {customEntries.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {customEntries.map(([k, v]) => (
+                                                                <span key={k} className="text-[10px] font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                                                                    • {v === 'No' ? `No ${k}` : `${k}: ${v}`}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Special Instruction */}
+                                                    {instruction && (
+                                                        <p className="text-[11px] text-indigo-700 italic bg-indigo-50 px-2 py-1 rounded border border-indigo-100 flex items-center gap-1">
+                                                            <MessageSquare className="w-3 h-3 text-indigo-500 shrink-0" />
+                                                            <span>Note: "{instruction}"</span>
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Sub-order subtotal & payment badge */}
+                                    <div className="flex items-center justify-between pt-1 text-xs">
+                                        <span className="text-slate-500 font-semibold flex items-center gap-1">
+                                            <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                                            {isPaid ? 'Paid' : 'Payment Pending'}
+                                        </span>
+                                        <span className="font-black text-slate-900">
+                                            Subtotal: ₹{Number(subOrder.total_amount || 0).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {/* Grand Total */}
+                    {/* Combined Grand Total */}
                     <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-md flex justify-between items-center">
                         <div>
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                                Grand Total Paid
+                                Combined Grand Total
                             </span>
-                            <span className="text-xs text-slate-400">All Taxes & Charges Included</span>
+                            <span className="text-xs text-slate-400">
+                                All {orders.length} Active Orders Included (Taxes Included)
+                            </span>
                         </div>
                         <span className="text-2xl font-black text-white">
-                            ₹{Number(order.total_amount || order.subtotal || 0).toFixed(2)}
+                            ₹{grandTotal.toFixed(2)}
                         </span>
                     </div>
                 </div>
@@ -301,4 +353,4 @@ export default function CustomerOrderDetailsModal({ order: initialOrder, onClose
             </div>
         </div>
     );
-}
+}
